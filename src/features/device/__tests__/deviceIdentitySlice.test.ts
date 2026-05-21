@@ -104,3 +104,58 @@ describe('deviceIdentitySlice 编辑流程', () => {
     expect(saved).toBe(newId)
   })
 })
+
+describe('deviceIdentitySlice 输入验证', () => {
+  let store: ReturnType<typeof makeStore>
+  
+  beforeEach(() => {
+    localStorage.clear()
+    localStorage.setItem(STORAGE_KEYS.DEVICE_ID, '11:22:33:44:55:66')
+    store = makeStore()
+  })
+
+  it('saveEdit 拒绝空字符串，保持原值', () => {
+    store.getState().startEdit()
+    store.getState().setEditDraft('')
+    store.getState().saveEdit()
+    
+    expect(store.getState().deviceId).toBe('11:22:33:44:55:66') // 原值不变
+    expect(store.getState().isEditing).toBe(true) // 仍在编辑模式
+    
+    const saved = localStorage.getItem(STORAGE_KEYS.DEVICE_ID)
+    expect(saved).toBe('11:22:33:44:55:66') // 持久化未改变
+  })
+
+  it('saveEdit 拒绝纯空格，保持原值', () => {
+    store.getState().startEdit()
+    store.getState().setEditDraft('   ')
+    store.getState().saveEdit()
+    
+    expect(store.getState().deviceId).toBe('11:22:33:44:55:66')
+    expect(store.getState().isEditing).toBe(true)
+    
+    const saved = localStorage.getItem(STORAGE_KEYS.DEVICE_ID)
+    expect(saved).toBe('11:22:33:44:55:66')
+  })
+
+  it('saveEdit 拒绝制表符和换行符，保持原值', () => {
+    store.getState().startEdit()
+    store.getState().setEditDraft('\t\n  ')
+    store.getState().saveEdit()
+    
+    expect(store.getState().deviceId).toBe('11:22:33:44:55:66')
+    expect(store.getState().isEditing).toBe(true)
+  })
+
+  it('saveEdit 接受有效的非空输入', () => {
+    store.getState().startEdit()
+    store.getState().setEditDraft('AA:BB:CC:DD:EE:FF')
+    store.getState().saveEdit()
+    
+    expect(store.getState().deviceId).toBe('AA:BB:CC:DD:EE:FF')
+    expect(store.getState().isEditing).toBe(false)
+    
+    const saved = localStorage.getItem(STORAGE_KEYS.DEVICE_ID)
+    expect(saved).toBe('AA:BB:CC:DD:EE:FF')
+  })
+})

@@ -11,6 +11,8 @@ export function ClientView() {
   const emotionEmoji = useStore(s => s.emotionEmoji)
   const emotion = useStore(s => s.emotion)
   const sttText = useStore(s => s.sttText)
+  const activationPayload = useStore(s => s.activationPayload)
+  const activationMessage = activationPayload?.message ?? ''
   const ttsText = useStore(s => s.ttsText)
   const audioStatus = useStore(s => s.audioStatus)
   const listenMode = useStore(s => s.listenMode)
@@ -76,7 +78,7 @@ export function ClientView() {
             </div>
           )}
           <p className="text-sm break-all">
-            {ttsText || <span className="text-muted-foreground/40 italic text-xs">等待回复...</span>}
+            {activationPayload ? activationMessage : (ttsText || <span className="text-muted-foreground/40 italic text-xs">等待回复...</span>)}
           </p>
         </div>
       </div>

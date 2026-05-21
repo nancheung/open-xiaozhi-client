@@ -24,8 +24,7 @@ export async function connect(): Promise<void> {
   store().setStatus('ota_fetching')
   store().addLog('system', `OTA 请求: ${config.otaUrl}/xiaozhi/ota/`)
 
-  let wsUrl: string
-  let token: string
+  let data: { websocket?: { url: string; token: string }; activation?: { message: string; [key: string]: unknown } }
   try {
     const res = await fetch(`${config.otaUrl}/xiaozhi/ota/`, {
       method: 'POST',
@@ -40,13 +39,30 @@ export async function connect(): Promise<void> {
       }),
     })
     if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`)
-    const data = await res.json() as { websocket: { url: string; token: string } }
-    wsUrl = data.websocket.url
-    token = data.websocket.token
+    data = await res.json()
   } catch (e) {
     store().setError(`OTA 失败: ${(e as Error).message}`)
     return
   }
+
+  // Check for activation requirement
+  if (data.activation) {
+    store().setActivation(data.activation)
+    store().setStatus('activation_required')
+    return
+  }
+
+  // Clear any previous activation prompt
+  store().clearActivation()
+
+  // Continue with normal WebSocket connection
+  if (!data.websocket) {
+    store().setError('OTA 响应缺少 websocket 字段')
+    return
+  }
+
+  const wsUrl = data.websocket.url
+  const token = data.websocket.token
 
   store().setWsInfo(wsUrl, token)
   store().setStatus('ws_connecting')

@@ -16,6 +16,7 @@ const STATUS_LABELS: Record<ConnectionStatus, string> = {
   listening: '监听中',
   playing: '播放中',
   error: '错误',
+  activation_required: '待激活',
 }
 
 const CONNECTING_STATUSES: ConnectionStatus[] = [
@@ -23,7 +24,7 @@ const CONNECTING_STATUSES: ConnectionStatus[] = [
 ]
 
 const CONNECTED_STATUSES: ConnectionStatus[] = [
-  'ready', 'listening', 'playing', 'mcp_init', 'handshaking', 'ws_connecting', 'ota_fetching',
+  'ready', 'listening', 'playing',
 ]
 
 function statusVariant(s: ConnectionStatus): 'default' | 'secondary' | 'destructive' | 'outline' {
@@ -43,6 +44,8 @@ export function ConnectionHeader() {
   const setEditDraft = useStore(s => s.setEditDraft)
   const saveEdit = useStore(s => s.saveEdit)
   const cancelEdit = useStore(s => s.cancelEdit)
+  const clearActivation = useStore(s => s.clearActivation)
+  const reset = useStore(s => s.reset)
   const status = useStore(s => s.status)
   const errorMessage = useStore(s => s.errorMessage)
   const updateConfig = useStore(s => s.updateConfig)
@@ -51,6 +54,20 @@ export function ConnectionHeader() {
   const isConnected = CONNECTED_STATUSES.includes(status)
   const isConnecting = CONNECTING_STATUSES.includes(status)
   const canEditDevice = !isConnected && !isConnecting
+
+  const handleRandomize = () => {
+    randomizeDeviceId()
+    clearActivation()
+    reset()
+  }
+
+  const handleSave = () => {
+    const success = saveEdit()
+    if (success) {
+      clearActivation()
+      reset()
+    }
+  }
 
   return (
     <header className="flex items-center gap-3 px-4 py-2 border-b bg-card shrink-0">
@@ -75,7 +92,7 @@ export function ConnectionHeader() {
               size="sm"
               variant="ghost"
               className="h-6 text-xs px-2"
-              onClick={randomizeDeviceId}
+              onClick={handleRandomize}
               disabled={!canEditDevice}
             >
               随机刷新
@@ -102,7 +119,7 @@ export function ConnectionHeader() {
               size="sm"
               variant="ghost"
               className="h-6 text-xs px-2"
-              onClick={saveEdit}
+              onClick={handleSave}
             >
               保存
             </Button>

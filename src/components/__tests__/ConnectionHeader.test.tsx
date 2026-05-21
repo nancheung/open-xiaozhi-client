@@ -189,3 +189,167 @@ describe('ConnectionHeader 按钮禁用逻辑', () => {
     expect(screen.getByRole('button', { name: /编辑/i })).not.toBeDisabled()
   })
 })
+
+describe('ConnectionHeader 连接状态区分', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    useStore.setState({
+      deviceId: 'AA:BB:CC:DD:EE:FF',
+      isEditing: false,
+      editDraft: '',
+    })
+  })
+
+  it('ready 状态应该被视为已连接', () => {
+    setupStore({ status: 'ready' })
+    render(<ConnectionHeader />)
+    
+    const connectBtn = screen.getByRole('button', { name: /断开/i })
+    expect(connectBtn).toBeInTheDocument()
+  })
+
+  it('listening 状态应该被视为已连接', () => {
+    setupStore({ status: 'listening' })
+    render(<ConnectionHeader />)
+    
+    const connectBtn = screen.getByRole('button', { name: /断开/i })
+    expect(connectBtn).toBeInTheDocument()
+  })
+
+  it('playing 状态应该被视为已连接', () => {
+    setupStore({ status: 'playing' })
+    render(<ConnectionHeader />)
+    
+    const connectBtn = screen.getByRole('button', { name: /断开/i })
+    expect(connectBtn).toBeInTheDocument()
+  })
+
+  it('ws_connecting 状态应该被视为连接中而非已连接', () => {
+    setupStore({ status: 'ws_connecting' })
+    render(<ConnectionHeader />)
+    
+    const connectBtn = screen.getByRole('button', { name: /连接中.../i })
+    expect(connectBtn).toBeInTheDocument()
+    expect(connectBtn).toBeDisabled()
+  })
+
+  it('handshaking 状态应该被视为连接中而非已连接', () => {
+    setupStore({ status: 'handshaking' })
+    render(<ConnectionHeader />)
+    
+    const connectBtn = screen.getByRole('button', { name: /连接中.../i })
+    expect(connectBtn).toBeInTheDocument()
+    expect(connectBtn).toBeDisabled()
+  })
+
+  it('mcp_init 状态应该被视为连接中而非已连接', () => {
+    setupStore({ status: 'mcp_init' })
+    render(<ConnectionHeader />)
+    
+    const connectBtn = screen.getByRole('button', { name: /连接中.../i })
+    expect(connectBtn).toBeInTheDocument()
+    expect(connectBtn).toBeDisabled()
+  })
+
+  it('ota_fetching 状态应该被视为连接中而非已连接', () => {
+    setupStore({ status: 'ota_fetching' })
+    render(<ConnectionHeader />)
+    
+    const connectBtn = screen.getByRole('button', { name: /连接中.../i })
+    expect(connectBtn).toBeInTheDocument()
+    expect(connectBtn).toBeDisabled()
+  })
+})
+
+describe('ConnectionHeader 激活状态', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    useStore.setState({
+      deviceId: 'AA:BB:CC:DD:EE:FF',
+      isEditing: false,
+      editDraft: '',
+      status: 'idle',
+    })
+  })
+
+  it('显示"待激活"状态标签', () => {
+    setupStore({ status: 'activation_required' })
+    render(<ConnectionHeader />)
+    
+    expect(screen.getByText('待激活')).toBeInTheDocument()
+  })
+
+  it('点击"随机刷新"按钮应该清除激活状态和连接状态', async () => {
+    const clearActivation = vi.fn()
+    const reset = vi.fn()
+    
+    useStore.setState({
+      status: 'activation_required',
+      activationPayload: { message: '需要激活' },
+      clearActivation,
+      reset,
+    })
+    
+    setupStore({ status: 'activation_required' })
+    render(<ConnectionHeader />)
+    
+    const randomBtn = screen.getByRole('button', { name: /随机刷新/i })
+    await userEvent.click(randomBtn)
+    
+    // Should clear activation and reset connection
+    expect(clearActivation).toHaveBeenCalled()
+    expect(reset).toHaveBeenCalled()
+  })
+
+  it('点击"保存"按钮应该清除激活状态和连接状态', async () => {
+    const clearActivation = vi.fn()
+    const reset = vi.fn()
+    
+    useStore.setState({
+      deviceId: 'AA:BB:CC:DD:EE:FF',
+      isEditing: true,
+      editDraft: 'FF:EE:DD:CC:BB:AA',
+      status: 'activation_required',
+      activationPayload: { message: '需要激活' },
+      clearActivation,
+      reset,
+    })
+    
+    render(<ConnectionHeader />)
+    
+    const saveBtn = screen.getByRole('button', { name: /保存/i })
+    await userEvent.click(saveBtn)
+    
+    // Should clear activation and reset connection
+    expect(clearActivation).toHaveBeenCalled()
+    expect(reset).toHaveBeenCalled()
+  })
+
+  it('保存空白设备 ID 时不应清除激活状态和连接状态', async () => {
+    const clearActivation = vi.fn()
+    const reset = vi.fn()
+    
+    useStore.setState({
+      deviceId: 'AA:BB:CC:DD:EE:FF',
+      isEditing: true,
+      editDraft: '   ',  // whitespace-only draft
+      status: 'activation_required',
+      activationPayload: { message: '需要激活' },
+      clearActivation,
+      reset,
+    })
+    
+    render(<ConnectionHeader />)
+    
+    const saveBtn = screen.getByRole('button', { name: /保存/i })
+    await userEvent.click(saveBtn)
+    
+    // Should NOT clear activation or reset when save is rejected
+    expect(clearActivation).not.toHaveBeenCalled()
+    expect(reset).not.toHaveBeenCalled()
+    
+    // Device ID should remain unchanged
+    const state = useStore.getState()
+    expect(state.deviceId).toBe('AA:BB:CC:DD:EE:FF')
+  })
+})

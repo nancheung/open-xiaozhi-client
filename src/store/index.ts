@@ -6,9 +6,10 @@ import { createMcpSlice, type McpState } from '../features/mcp/mcpSlice'
 import { createAudioSlice, type AudioState } from '../features/audio/audioSlice'
 import { createIotSlice, type IotState } from '../features/iot/iotSlice'
 import { createDeviceIdentitySlice, type DeviceIdentityState } from '../features/device/deviceIdentitySlice'
+import { createActivationSlice, type ActivationState } from '../features/activation/activationSlice'
 
 export type AppState =
-  ConnectionState & SettingsState & ProtocolState & McpState & AudioState & IotState & DeviceIdentityState
+  ConnectionState & SettingsState & ProtocolState & McpState & AudioState & IotState & DeviceIdentityState & ActivationState
 
 export const useStore = create<AppState>()((...args) => ({
   ...createConnectionSlice(...args),
@@ -18,4 +19,5 @@ export const useStore = create<AppState>()((...args) => ({
   ...createAudioSlice(...args),
   ...createIotSlice(...args),
   ...createDeviceIdentitySlice(...args),
+  ...createActivationSlice(...args),
 }))

@@ -6,3 +6,8 @@ dist/
 *.log
 .DS_Store
 @/
+
+.idea
+.vscode
+.claude
+docs/superpowers

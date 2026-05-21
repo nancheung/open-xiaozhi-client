@@ -3,7 +3,7 @@ import { STORAGE_KEYS, getStorageString, setStorageString } from '../../lib/pers
 
 export type ConnectionStatus =
   | 'idle' | 'ota_fetching' | 'ws_connecting' | 'handshaking'
-  | 'mcp_init' | 'ready' | 'listening' | 'playing' | 'error'
+  | 'mcp_init' | 'ready' | 'listening' | 'playing' | 'error' | 'activation_required'
 
 export interface ConnectionConfig {
   otaUrl: string       // e.g. http://localhost:8003

@@ -9,7 +9,7 @@ export interface DeviceIdentityState {
   randomizeDeviceId: () => void
   startEdit: () => void
   setEditDraft: (value: string) => void
-  saveEdit: () => void
+  saveEdit: () => boolean
   cancelEdit: () => void
 }
 
@@ -48,9 +48,14 @@ export const createDeviceIdentitySlice: StateCreator<DeviceIdentityState> = (set
   },
 
   saveEdit: () => {
-    const draft = get().editDraft
+    const draft = get().editDraft.trim()
+    if (!draft) {
+      // Reject empty or whitespace-only input
+      return false
+    }
     setStorageString(STORAGE_KEYS.DEVICE_ID, draft)
     set({ deviceId: draft, isEditing: false, editDraft: '' })
+    return true
   },
 
   cancelEdit: () => {

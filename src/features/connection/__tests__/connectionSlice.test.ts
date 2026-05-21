@@ -71,7 +71,7 @@ describe('connectionSlice otaUrl 持久化', () => {
     localStorage.setItem(STORAGE_KEYS.OTA_URL, 'http://existing:8003')
     const store = makeStore()
     
-    store.getState().updateConfig({ deviceId: 'FF:EE:DD:CC:BB:AA' })
+    store.getState().updateConfig({ clientId: 'new-client-id' })
     
     const saved = localStorage.getItem(STORAGE_KEYS.OTA_URL)
     expect(saved).toBe('http://existing:8003')

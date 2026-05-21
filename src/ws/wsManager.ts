@@ -28,7 +28,7 @@ export async function connect(): Promise<void> {
   let token: string
   try {
     const res = await fetch(`${config.otaUrl}/xiaozhi/ota/`, {
-      method: 'GET',
+      method: 'POST',
       headers: {
         'Device-Id': config.deviceId,
         'Client-Id': config.clientId,

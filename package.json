@@ -1,9 +1,9 @@
 {
-  "name": "open-xiaozhi-client",
+  "name": "open-xiaozhi-client-webui",
   "version": "0.1.0",
   "type": "module",
   "bin": {
-    "open-xiaozhi-client": "bin/cli.js"
+    "open-xiaozhi-client-webui": "bin/cli.js"
   },
   "files": [
     "bin/",

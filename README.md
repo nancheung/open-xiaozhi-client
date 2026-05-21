@@ -14,8 +14,8 @@
 它既适合开发者作为 **小智服务端调试工具** 使用，也适合普通用户快速上手体验小智的交互链路。
 
 ```bash
-npm install -g open-xiaozhi-client
-open-xiaozhi-client
+npm install -g open-xiaozhi-client-webui
+open-xiaozhi-client-webui
 ```
 
 > ⚡ 1分钟跑起来！执行后自动启动本地服务并打开浏览器，默认访问 `http://127.0.0.1:14100`，按 `Ctrl+C` 退出。

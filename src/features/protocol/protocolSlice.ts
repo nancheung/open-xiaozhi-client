@@ -22,13 +22,15 @@ export interface ProtocolState {
   setAlert: (a: AlertMessage | null) => void
 }
 
-export const createProtocolSlice: StateCreator<ProtocolState, [], [], ProtocolState> = (set, _get) => ({
+export const createProtocolSlice: StateCreator<ProtocolState, [], [], ProtocolState> = (set, get) => ({
   log: [],
   alert: null,
   addLog: (direction, data) => {
     set((s) => {
       const entry: LogEntry = { id: nextId(), timestamp: Date.now(), direction, data }
-      const log = [...s.log, entry].slice(-500)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const maxEntries: number = (get as any)().maxLogEntries ?? 500
+      const log = [...s.log, entry].slice(-maxEntries)
       return { log }
     })
   },

@@ -34,7 +34,15 @@ function statusVariant(s: ConnectionStatus): 'default' | 'secondary' | 'destruct
 }
 
 export function ConnectionHeader() {
-  const { otaUrl, deviceId } = useStore(s => s.config)
+  const { otaUrl } = useStore(s => s.config)
+  const deviceId = useStore(s => s.deviceId)
+  const isEditing = useStore(s => s.isEditing)
+  const editDraft = useStore(s => s.editDraft)
+  const randomizeDeviceId = useStore(s => s.randomizeDeviceId)
+  const startEdit = useStore(s => s.startEdit)
+  const setEditDraft = useStore(s => s.setEditDraft)
+  const saveEdit = useStore(s => s.saveEdit)
+  const cancelEdit = useStore(s => s.cancelEdit)
   const status = useStore(s => s.status)
   const errorMessage = useStore(s => s.errorMessage)
   const updateConfig = useStore(s => s.updateConfig)
@@ -42,6 +50,7 @@ export function ConnectionHeader() {
 
   const isConnected = CONNECTED_STATUSES.includes(status)
   const isConnecting = CONNECTING_STATUSES.includes(status)
+  const canEditDevice = !isConnected && !isConnecting
 
   return (
     <header className="flex items-center gap-3 px-4 py-2 border-b bg-card shrink-0">
@@ -59,7 +68,54 @@ export function ConnectionHeader() {
 
       <div className="flex items-center gap-1 min-w-0">
         <span className="text-xs text-muted-foreground shrink-0">设备 ID</span>
-        <code className="text-xs bg-muted px-1.5 py-0.5 rounded truncate max-w-36">{deviceId}</code>
+        {!isEditing ? (
+          <>
+            <code className="text-xs bg-muted px-1.5 py-0.5 rounded truncate max-w-36">{deviceId}</code>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 text-xs px-2"
+              onClick={randomizeDeviceId}
+              disabled={!canEditDevice}
+            >
+              随机刷新
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 text-xs px-2"
+              onClick={startEdit}
+              disabled={!canEditDevice}
+            >
+              编辑
+            </Button>
+          </>
+        ) : (
+          <>
+            <Input
+              className="h-6 text-xs w-44"
+              value={editDraft}
+              onChange={e => setEditDraft(e.target.value)}
+              placeholder="AA:BB:CC:DD:EE:FF"
+            />
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 text-xs px-2"
+              onClick={saveEdit}
+            >
+              保存
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 text-xs px-2"
+              onClick={cancelEdit}
+            >
+              取消
+            </Button>
+          </>
+        )}
       </div>
 
       <div className="flex items-center gap-2 ml-auto">

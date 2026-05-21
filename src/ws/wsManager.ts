@@ -19,7 +19,7 @@ function store() {
 export async function connect(): Promise<void> {
   disconnect()
 
-  const { config, helloVersion, helloFeatures, helloAudio, handshakeTimeoutMs } = store()
+  const { config, deviceId, helloVersion, helloFeatures, helloAudio, handshakeTimeoutMs } = store()
 
   store().setStatus('ota_fetching')
   store().addLog('system', `OTA 请求: ${config.otaUrl}/xiaozhi/ota/`)
@@ -30,7 +30,7 @@ export async function connect(): Promise<void> {
     const res = await fetch(`${config.otaUrl}/xiaozhi/ota/`, {
       method: 'POST',
       headers: {
-        'Device-Id': config.deviceId,
+        'Device-Id': deviceId,
         'Client-Id': config.clientId,
         'Content-Type': 'application/json',
       },
@@ -52,7 +52,7 @@ export async function connect(): Promise<void> {
   store().setStatus('ws_connecting')
 
   const urlObj = new URL(wsUrl)
-  urlObj.searchParams.set('device-id', config.deviceId)
+  urlObj.searchParams.set('device-id', deviceId)
   if (config.clientId) urlObj.searchParams.set('client-id', config.clientId)
   if (token) urlObj.searchParams.set('authorization', `Bearer ${token}`)
   store().addLog('system', `连接 WebSocket: ${urlObj.toString()}`)

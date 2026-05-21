@@ -7,7 +7,6 @@ export type ConnectionStatus =
 
 export interface ConnectionConfig {
   otaUrl: string       // e.g. http://localhost:8003
-  deviceId: string     // AA:BB:CC:DD:EE:FF
   clientId: string     // UUID
 }
 
@@ -27,18 +26,6 @@ export interface ConnectionState {
   setDownstreamSampleRate: (r: number) => void
   updateConfig: (patch: Partial<ConnectionConfig>) => void
   reset: () => void
-}
-
-/** 生成随机 MAC 格式 Device-Id，持久化到 localStorage */
-function getOrCreateDeviceId(): string {
-  const key = STORAGE_KEYS.DEVICE_ID
-  const stored = getStorageString(key)
-  if (stored) return stored
-  const mac = Array.from({ length: 6 }, () =>
-    Math.floor(Math.random() * 256).toString(16).padStart(2, '0').toUpperCase()
-  ).join(':')
-  setStorageString(key, mac)
-  return mac
 }
 
 function getOrCreateClientId(): string {
@@ -64,7 +51,6 @@ export const createConnectionSlice: StateCreator<ConnectionState> = (set) => ({
   downstreamSampleRate: 24000,
   config: {
     otaUrl: typeof localStorage !== 'undefined' ? loadOtaUrl() : 'http://localhost:8003',
-    deviceId: typeof localStorage !== 'undefined' ? getOrCreateDeviceId() : 'AA:BB:CC:DD:EE:FF',
     clientId: typeof localStorage !== 'undefined' ? getOrCreateClientId() : crypto.randomUUID(),
   },
   setStatus: (status) => set({ status, errorMessage: status !== 'error' ? null : undefined }),

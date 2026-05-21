@@ -34,6 +34,10 @@ export async function connect(): Promise<void> {
         'Client-Id': config.clientId,
         'Content-Type': 'application/json',
       },
+      body: JSON.stringify({
+        application: { version: '1.0.0' },
+        board: { type: 'open-xiaozhi-client' },
+      }),
     })
     if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`)
     const data = await res.json() as { websocket: { url: string; token: string } }
@@ -48,7 +52,9 @@ export async function connect(): Promise<void> {
   store().setStatus('ws_connecting')
 
   const urlObj = new URL(wsUrl)
-  if (token) urlObj.searchParams.set('token', token)
+  urlObj.searchParams.set('device-id', config.deviceId)
+  if (config.clientId) urlObj.searchParams.set('client-id', config.clientId)
+  if (token) urlObj.searchParams.set('authorization', `Bearer ${token}`)
   store().addLog('system', `连接 WebSocket: ${urlObj.toString()}`)
 
   ws = new WebSocket(urlObj.toString())
@@ -116,22 +122,7 @@ function handleText(raw: string): void {
 
     if (store().helloFeatures.mcp) {
       store().setStatus('mcp_init')
-      const mcpInit: MCPMessage = {
-        type: 'mcp',
-        session_id: msg.session_id,
-        payload: {
-          jsonrpc: '2.0',
-          id: 1,
-          method: 'initialize',
-          params: {
-            protocolVersion: '2024-11-05',
-            capabilities: {},
-            clientInfo: { name: 'xiaozhi-web-client', version: '0.1.0' },
-          },
-        },
-      }
-      sendJson(mcpInit)
-      store().addLog('out', mcpInit)
+      // 等待服务端主动发起 initialize，不主动发送
     } else {
       store().setStatus('ready')
     }
@@ -201,9 +192,15 @@ function handleMcp(msg: MCPMessage): void {
   const { payload } = msg
   const sid = store().sessionId ?? ''
 
-  // MCP initialize response (id=1, has result, no method)
-  if (payload.id === 1 && payload.result !== undefined && !payload.method) {
-    store().setStatus('ready')
+  // initialize request from server (server is MCP initiator)
+  if (payload.method === 'initialize') {
+    const resp = buildMCPResponse(sid, {
+      jsonrpc: '2.0',
+      id: payload.id,
+      result: { serverInfo: { name: 'open-xiaozhi-client', version: '0.1.0' } },
+    })
+    sendJson(resp)
+    store().addLog('out', resp)
     return
   }
 
@@ -216,6 +213,7 @@ function handleMcp(msg: MCPMessage): void {
     })
     sendJson(resp)
     store().addLog('out', resp)
+    store().setStatus('ready')
     return
   }
 

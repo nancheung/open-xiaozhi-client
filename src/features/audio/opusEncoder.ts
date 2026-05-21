@@ -6,7 +6,8 @@ let encoder: InstanceType<typeof OpusScript> | null = null
 
 function getEncoder() {
   if (!encoder) {
-    encoder = new OpusScript(16000 as ValidSamplingRate, 1, OpusScript.Application.VOIP)
+    // wasm: false 强制使用 NASM (asm.js) 版本，避免浏览器同步 XHR 加载 WASM 失败
+    encoder = new OpusScript(16000 as ValidSamplingRate, 1, OpusScript.Application.VOIP, { wasm: false })
   }
   return encoder
 }
@@ -14,8 +15,9 @@ function getEncoder() {
 /** Float32 PCM（960 样本，16kHz）→ Opus Uint8Array */
 export function encodeFloat32ToOpus(float32Pcm: Float32Array): Uint8Array {
   const int16 = floatToInt16(float32Pcm)
-  const buf = Buffer.from(int16.buffer)
-  const encoded = getEncoder().encode(buf, 960)
+  // 用 Uint8Array 正确切片（Buffer.from(int16.buffer) 会包含完整 ArrayBuffer 而忽略 byteOffset）
+  const buf = new Uint8Array(int16.buffer, int16.byteOffset, int16.byteLength)
+  const encoded = getEncoder().encode(buf as unknown as Buffer, 960)
   return new Uint8Array(encoded)
 }
 

@@ -34,7 +34,7 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    include: ['opusscript'],
+    include: ['opusscript', 'buffer'],
   },
   test: {
     environment: 'jsdom',

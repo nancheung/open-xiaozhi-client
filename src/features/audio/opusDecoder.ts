@@ -9,14 +9,15 @@ let _sampleRate: ValidSamplingRate = 24000
 export function initDecoder(sampleRate: number) {
   decoder?.delete()
   _sampleRate = sampleRate as ValidSamplingRate
-  decoder = new OpusScript(_sampleRate, 1, OpusScript.Application.AUDIO)
+  // WASM 版本在浏览器主线程中同步 XHR 被禁用，使用 NASM (asm.js) 版本，代码内联无需网络请求
+  decoder = new OpusScript(_sampleRate, 1, OpusScript.Application.AUDIO, { wasm: false })
 }
 
 /** Opus Uint8Array → Float32 PCM */
 export function decodeOpusToFloat32(opusData: Uint8Array): Float32Array {
   if (!decoder) initDecoder(_sampleRate)
-  const buf = Buffer.from(opusData)
-  const int16Buf = decoder!.decode(buf)
+  // Buffer 是 Node.js API，浏览器不可用；opusscript 运行时接受 Uint8Array（Buffer 的父类）
+  const int16Buf = decoder!.decode(opusData as unknown as Buffer)
   const int16 = new Int16Array(int16Buf.buffer, int16Buf.byteOffset, int16Buf.byteLength / 2)
   return int16ToFloat32(int16)
 }

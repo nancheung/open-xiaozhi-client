@@ -2,13 +2,19 @@ import { useEffect, useRef } from 'react'
 import { useStore } from '../store'
 import { encodeFloat32ToOpus, disposeEncoder } from '../features/audio/opusEncoder'
 import { decodeOpusToFloat32 } from '../features/audio/opusDecoder'
+import { createRecordingProcessorUrl } from '../features/audio/recordingProcessor'
 import { sendBinary } from '../ws/wsManager'
 
 export function useAudio() {
   const playbackCtxRef = useRef<AudioContext | null>(null)
+  const playbackMasterGainRef = useRef<GainNode | null>(null)
+  const playbackAnalyserRef = useRef<AnalyserNode | null>(null)
+
   const recordCtxRef = useRef<AudioContext | null>(null)
   const mediaStreamRef = useRef<MediaStream | null>(null)
-  const processorRef = useRef<ScriptProcessorNode | null>(null)
+  const workletRef = useRef<AudioWorkletNode | null>(null)
+  const recordingAnalyserRef = useRef<AnalyserNode | null>(null)
+
   const nextPlayTimeRef = useRef(0)
 
   const downstreamSampleRate = useStore(s => s.downstreamSampleRate)
@@ -17,13 +23,29 @@ export function useAudio() {
 
   function getPlaybackCtx() {
     if (!playbackCtxRef.current || playbackCtxRef.current.state === 'closed') {
-      playbackCtxRef.current = new AudioContext({ sampleRate: downstreamSampleRate })
+      const ctx = new AudioContext({ sampleRate: downstreamSampleRate })
+
+      // 主混音节点 → 分析节点 → 扬声器
+      const masterGain = ctx.createGain()
+      const analyser = ctx.createAnalyser()
+      analyser.fftSize = 128
+      masterGain.connect(analyser)
+      analyser.connect(ctx.destination)
+
+      playbackCtxRef.current = ctx
+      playbackMasterGainRef.current = masterGain
+      playbackAnalyserRef.current = analyser
       nextPlayTimeRef.current = 0
+
+      const onStateChange = () => {
+        useStore.getState().setAudioContextSuspended(ctx.state === 'suspended')
+      }
+      ctx.addEventListener('statechange', onStateChange)
     }
     return playbackCtxRef.current
   }
 
-  // Incoming audio playback
+  // 接收服务器音频并播放
   useEffect(() => {
     const handleAudio = (event: Event) => {
       try {
@@ -36,7 +58,7 @@ export function useAudio() {
 
         const source = ctx.createBufferSource()
         source.buffer = buffer
-        source.connect(ctx.destination)
+        source.connect(playbackMasterGainRef.current!)
 
         const now = ctx.currentTime
         const startAt = Math.max(now, nextPlayTimeRef.current)
@@ -60,28 +82,46 @@ export function useAudio() {
 
       const ctx = new AudioContext({ sampleRate: uploadSampleRate })
       recordCtxRef.current = ctx
-      const source = ctx.createMediaStreamSource(stream)
-      // 960 samples = 60 ms at 16 kHz (matches helloAudio.frame_duration)
-      const processor = ctx.createScriptProcessor(960, 1, 1)
 
-      processor.onaudioprocess = (e) => {
-        const input = new Float32Array(e.inputBuffer.getChannelData(0))
-        const encoded = encodeFloat32ToOpus(input)
-        sendBinary(encoded)
-        useStore.getState().addLog('binary-out', `[binary ${encoded.byteLength} bytes]`)
+      // 加载 AudioWorklet Processor（Blob URL，兼容 dev/preview/build）
+      const processorUrl = createRecordingProcessorUrl()
+      await ctx.audioWorklet.addModule(processorUrl)
+      URL.revokeObjectURL(processorUrl)
+
+      const source = ctx.createMediaStreamSource(stream)
+
+      // 录音音量分析（供 VolumeBar 使用）
+      const analyser = ctx.createAnalyser()
+      analyser.fftSize = 256
+      recordingAnalyserRef.current = analyser
+
+      const worklet = new AudioWorkletNode(ctx, 'recording-processor')
+      worklet.port.onmessage = (e: MessageEvent<{ type: string; data: Float32Array }>) => {
+        if (e.data.type === 'pcm') {
+          const encoded = encodeFloat32ToOpus(e.data.data)
+          sendBinary(encoded)
+          useStore.getState().addLog('binary-out', `[binary ${encoded.byteLength} bytes]`)
+        }
       }
 
-      source.connect(processor)
-      processor.connect(ctx.destination)
-      processorRef.current = processor
+      source.connect(analyser)
+      source.connect(worklet)
+      worklet.connect(ctx.destination)
+      workletRef.current = worklet
     } catch (e) {
-      console.error('[useAudio] startRecording error:', e)
+      const msg =
+        e instanceof DOMException && e.name === 'NotAllowedError'
+          ? '麦克风权限被拒绝，请在浏览器设置中允许麦克风访问'
+          : `录音初始化失败: ${(e as Error).message}`
+      useStore.getState().setAudioError(msg)
+      useStore.getState().setAudioStatus('idle')
     }
   }
 
   function stopRecording() {
-    processorRef.current?.disconnect()
-    processorRef.current = null
+    workletRef.current?.disconnect()
+    workletRef.current = null
+    recordingAnalyserRef.current = null
     mediaStreamRef.current?.getTracks().forEach(t => t.stop())
     mediaStreamRef.current = null
     void recordCtxRef.current?.close()
@@ -102,6 +142,14 @@ export function useAudio() {
       stopRecording()
       void playbackCtxRef.current?.close()
       playbackCtxRef.current = null
+      playbackMasterGainRef.current = null
+      playbackAnalyserRef.current = null
     }
   }, [])
+
+  function resumeAudioContext() {
+    void playbackCtxRef.current?.resume()
+  }
+
+  return { recordingAnalyserRef, playbackAnalyserRef, resumeAudioContext }
 }

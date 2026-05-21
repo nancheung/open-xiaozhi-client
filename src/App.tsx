@@ -6,10 +6,8 @@ import { IotPanel } from './components/IotPanel'
 import { HttpPanel } from './components/HttpPanel'
 import { SettingsPanel } from './components/SettingsPanel'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs'
-import { useAudio } from './hooks/useAudio'
 
 export default function App() {
-  useAudio()
 
   return (
     <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden">

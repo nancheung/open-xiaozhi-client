@@ -11,12 +11,16 @@ export interface AudioState {
   ttsText: string        // 当前字幕（sentence_start 的 text）
   emotion: EmotionType
   emotionEmoji: string
+  audioError: string | null          // 麦克风权限拒绝 / 解码失败等用户可见错误
+  audioContextSuspended: boolean     // 播放 AudioContext 被浏览器策略挂起
   // actions
   setAudioStatus: (s: AudioStatus) => void
   setListenMode: (m: ListenMode) => void
   setSTT: (text: string) => void
   setTTSText: (text: string) => void
   setEmotion: (emotion: EmotionType, emoji: string) => void
+  setAudioError: (e: string | null) => void
+  setAudioContextSuspended: (s: boolean) => void
   resetAudio: () => void
 }
 
@@ -27,10 +31,14 @@ export const createAudioSlice: StateCreator<AudioState> = (set) => ({
   ttsText: '',
   emotion: 'neutral',
   emotionEmoji: '😶',
+  audioError: null,
+  audioContextSuspended: false,
   setAudioStatus: (audioStatus) => set({ audioStatus }),
   setListenMode: (listenMode) => set({ listenMode }),
   setSTT: (sttText) => set({ sttText }),
   setTTSText: (ttsText) => set({ ttsText }),
   setEmotion: (emotion, emotionEmoji) => set({ emotion, emotionEmoji }),
+  setAudioError: (audioError) => set({ audioError }),
+  setAudioContextSuspended: (audioContextSuspended) => set({ audioContextSuspended }),
   resetAudio: () => set({ audioStatus: 'idle', sttText: '', ttsText: '' }),
 })

@@ -1,4 +1,5 @@
 import { StateCreator } from 'zustand'
+import { STORAGE_KEYS, getStorageString, setStorageString } from '../../lib/persistence'
 
 export type ConnectionStatus =
   | 'idle' | 'ota_fetching' | 'ws_connecting' | 'handshaking'
@@ -30,23 +31,28 @@ export interface ConnectionState {
 
 /** 生成随机 MAC 格式 Device-Id，持久化到 localStorage */
 function getOrCreateDeviceId(): string {
-  const key = 'xiaozhi_device_id'
-  const stored = localStorage.getItem(key)
+  const key = STORAGE_KEYS.DEVICE_ID
+  const stored = getStorageString(key)
   if (stored) return stored
   const mac = Array.from({ length: 6 }, () =>
     Math.floor(Math.random() * 256).toString(16).padStart(2, '0').toUpperCase()
   ).join(':')
-  localStorage.setItem(key, mac)
+  setStorageString(key, mac)
   return mac
 }
 
 function getOrCreateClientId(): string {
-  const key = 'xiaozhi_client_id'
-  const stored = localStorage.getItem(key)
+  const key = STORAGE_KEYS.CLIENT_ID
+  const stored = getStorageString(key)
   if (stored) return stored
   const uuid = crypto.randomUUID()
-  localStorage.setItem(key, uuid)
+  setStorageString(key, uuid)
   return uuid
+}
+
+function loadOtaUrl(): string {
+  const stored = getStorageString(STORAGE_KEYS.OTA_URL)
+  return stored || 'http://localhost:8003'
 }
 
 export const createConnectionSlice: StateCreator<ConnectionState> = (set) => ({
@@ -57,7 +63,7 @@ export const createConnectionSlice: StateCreator<ConnectionState> = (set) => ({
   token: null,
   downstreamSampleRate: 24000,
   config: {
-    otaUrl: 'http://localhost:8003',
+    otaUrl: typeof localStorage !== 'undefined' ? loadOtaUrl() : 'http://localhost:8003',
     deviceId: typeof localStorage !== 'undefined' ? getOrCreateDeviceId() : 'AA:BB:CC:DD:EE:FF',
     clientId: typeof localStorage !== 'undefined' ? getOrCreateClientId() : crypto.randomUUID(),
   },
@@ -66,6 +72,12 @@ export const createConnectionSlice: StateCreator<ConnectionState> = (set) => ({
   setSessionId: (sessionId) => set({ sessionId }),
   setWsInfo: (wsUrl, token) => set({ wsUrl, token }),
   setDownstreamSampleRate: (downstreamSampleRate) => set({ downstreamSampleRate }),
-  updateConfig: (patch) => set((s) => ({ config: { ...s.config, ...patch } })),
+  updateConfig: (patch) => set((s) => {
+    const newConfig = { ...s.config, ...patch }
+    if (patch.otaUrl !== undefined) {
+      setStorageString(STORAGE_KEYS.OTA_URL, patch.otaUrl)
+    }
+    return { config: newConfig }
+  }),
   reset: () => set({ status: 'idle', sessionId: null, wsUrl: null, token: null, errorMessage: null }),
 })

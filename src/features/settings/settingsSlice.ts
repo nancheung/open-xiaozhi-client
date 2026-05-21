@@ -1,4 +1,5 @@
 import { StateCreator } from 'zustand'
+import { STORAGE_KEYS, getStorageJSON, setStorageJSON } from '../../lib/persistence'
 
 export interface HelloFeatures { mcp: boolean; emoji: boolean }
 export interface HelloAudioParams {
@@ -20,7 +21,9 @@ export interface SettingsState {
   updateSettings: (patch: Partial<Omit<SettingsState, 'updateHelloFeatures' | 'updateHelloAudio' | 'updateSettings'>>) => void
 }
 
-export const createSettingsSlice: StateCreator<SettingsState> = (set) => ({
+type SettingsData = Omit<SettingsState, 'updateHelloFeatures' | 'updateHelloAudio' | 'updateSettings'>
+
+const defaults: SettingsData = {
   helloVersion: 3,
   helloFeatures: { mcp: true, emoji: true },
   helloAudio: { format: 'opus', sample_rate: 16000, channels: 1, frame_duration: 60 },
@@ -28,7 +31,44 @@ export const createSettingsSlice: StateCreator<SettingsState> = (set) => ({
   heartbeatIntervalMs: 0,
   maxLogEntries: 500,
   mergeBinaryFrames: true,
-  updateHelloFeatures: (f) => set((s) => ({ helloFeatures: { ...s.helloFeatures, ...f } })),
-  updateHelloAudio: (a) => set((s) => ({ helloAudio: { ...s.helloAudio, ...a } })),
-  updateSettings: (patch) => set(patch),
-})
+}
+
+function loadSettings(): SettingsData {
+  const saved = getStorageJSON<SettingsData>(STORAGE_KEYS.SETTINGS)
+  return saved ? { ...defaults, ...saved } : defaults
+}
+
+function saveSettings(state: SettingsState): void {
+  const data: SettingsData = {
+    helloVersion: state.helloVersion,
+    helloFeatures: state.helloFeatures,
+    helloAudio: state.helloAudio,
+    handshakeTimeoutMs: state.handshakeTimeoutMs,
+    heartbeatIntervalMs: state.heartbeatIntervalMs,
+    maxLogEntries: state.maxLogEntries,
+    mergeBinaryFrames: state.mergeBinaryFrames,
+  }
+  setStorageJSON(STORAGE_KEYS.SETTINGS, data)
+}
+
+export const createSettingsSlice: StateCreator<SettingsState> = (set) => {
+  const initial = loadSettings()
+  return {
+    ...initial,
+    updateHelloFeatures: (f) => set((s) => {
+      const newState = { ...s, helloFeatures: { ...s.helloFeatures, ...f } }
+      saveSettings(newState)
+      return { helloFeatures: newState.helloFeatures }
+    }),
+    updateHelloAudio: (a) => set((s) => {
+      const newState = { ...s, helloAudio: { ...s.helloAudio, ...a } }
+      saveSettings(newState)
+      return { helloAudio: newState.helloAudio }
+    }),
+    updateSettings: (patch) => set((s) => {
+      const newState = { ...s, ...patch }
+      saveSettings(newState)
+      return patch
+    }),
+  }
+}

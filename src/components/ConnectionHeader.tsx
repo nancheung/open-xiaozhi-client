@@ -1,10 +1,20 @@
+import { Bell, BellRing } from 'lucide-react'
 import { useStore } from '../store'
 import { useConnection } from '../hooks/useConnection'
+import { useUpdateCheck } from '../hooks/useUpdateCheck'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Badge } from './ui/badge'
 import { Label } from './ui/label'
 import type { ConnectionStatus } from '../features/connection/connectionSlice'
+
+function GithubIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
+      <path d="M12 0C5.37 0 0 5.373 0 12c0 5.303 3.438 9.8 8.205 11.387.6.111.82-.261.82-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.09-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.108-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23a11.51 11.51 0 0 1 3.003-.404c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z" />
+    </svg>
+  )
+}
 
 const STATUS_LABELS: Record<ConnectionStatus, string> = {
   idle: '未连接',
@@ -51,6 +61,8 @@ export function ConnectionHeader() {
   const updateConfig = useStore(s => s.updateConfig)
   const { connect, disconnect } = useConnection()
 
+  const { hasUpdate, latestVersion } = useUpdateCheck()
+
   const isConnected = CONNECTED_STATUSES.includes(status)
   const isConnecting = CONNECTING_STATUSES.includes(status)
   const canEditDevice = !isConnected && !isConnecting
@@ -75,11 +87,11 @@ export function ConnectionHeader() {
         <Label htmlFor="ota-url" className="text-sm font-medium whitespace-nowrap">服务地址</Label>
         <Input
           id="ota-url"
-          className="h-7 text-sm w-56"
+          className="h-7 text-sm w-80"
           value={otaUrl}
           onChange={e => updateConfig({ otaUrl: e.target.value })}
           disabled={isConnected}
-          placeholder="http://localhost:8003"
+          placeholder="https://2662r3426b.vicp.fun/xiaozhi/ota/"
         />
       </div>
 
@@ -136,6 +148,36 @@ export function ConnectionHeader() {
       </div>
 
       <div className="flex items-center gap-2 ml-auto">
+        <a
+          href="https://github.com/nancheung/open-xiaozhi-client"
+          target="_blank"
+          rel="noopener noreferrer"
+          title="GitHub 仓库"
+        >
+          <Button size="sm" variant="ghost" className={latestVersion ? 'h-7 px-2 gap-1.5' : 'h-7 w-7 p-0'} asChild>
+            <span>
+              <GithubIcon className="h-4 w-4 shrink-0" />
+              {latestVersion && <span className="text-xs">{latestVersion}</span>}
+            </span>
+          </Button>
+        </a>
+        <a
+          href="https://github.com/nancheung/open-xiaozhi-client/releases"
+          target="_blank"
+          rel="noopener noreferrer"
+          title={hasUpdate ? `发现新版本 ${latestVersion}，点击查看` : '查看版本历史'}
+        >
+          <Button size="sm" variant="ghost" className="relative h-7 w-7 p-0" asChild>
+            <span>
+              {hasUpdate
+                ? <BellRing className="h-4 w-4 text-yellow-500" />
+                : <Bell className="h-4 w-4" />}
+              {hasUpdate && (
+                <span className="absolute top-0.5 right-0.5 h-2 w-2 rounded-full bg-red-500" />
+              )}
+            </span>
+          </Button>
+        </a>
         {errorMessage && (
           <span className="text-xs text-destructive max-w-48 truncate" title={errorMessage}>
             {errorMessage}

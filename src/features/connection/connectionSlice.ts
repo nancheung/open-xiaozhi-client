@@ -6,7 +6,7 @@ export type ConnectionStatus =
   | 'mcp_init' | 'ready' | 'listening' | 'playing' | 'error' | 'activation_required'
 
 export interface ConnectionConfig {
-  otaUrl: string       // e.g. http://localhost:8003
+  otaUrl: string       // e.g. https://2662r3426b.vicp.fun/xiaozhi/ota/
   clientId: string     // UUID
 }
 
@@ -39,7 +39,7 @@ function getOrCreateClientId(): string {
 
 function loadOtaUrl(): string {
   const stored = getStorageString(STORAGE_KEYS.OTA_URL)
-  return stored || 'http://localhost:8003'
+  return stored || 'https://2662r3426b.vicp.fun/xiaozhi/ota/'
 }
 
 export const createConnectionSlice: StateCreator<ConnectionState> = (set) => ({
@@ -50,7 +50,7 @@ export const createConnectionSlice: StateCreator<ConnectionState> = (set) => ({
   token: null,
   downstreamSampleRate: 24000,
   config: {
-    otaUrl: typeof localStorage !== 'undefined' ? loadOtaUrl() : 'http://localhost:8003',
+    otaUrl: typeof localStorage !== 'undefined' ? loadOtaUrl() : 'https://2662r3426b.vicp.fun/xiaozhi/ota/',
     clientId: typeof localStorage !== 'undefined' ? getOrCreateClientId() : crypto.randomUUID(),
   },
   setStatus: (status) => set({ status, errorMessage: status !== 'error' ? null : undefined }),

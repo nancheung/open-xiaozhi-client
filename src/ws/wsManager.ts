@@ -22,11 +22,11 @@ export async function connect(): Promise<void> {
   const { config, deviceId, helloVersion, helloFeatures, helloAudio, handshakeTimeoutMs } = store()
 
   store().setStatus('ota_fetching')
-  store().addLog('system', `OTA 请求: ${config.otaUrl}/xiaozhi/ota/`)
+  store().addLog('system', `OTA 请求: ${config.otaUrl}`)
 
   let data: { websocket?: { url: string; token: string }; activation?: { message: string; [key: string]: unknown } }
   try {
-    const res = await fetch(`${config.otaUrl}/xiaozhi/ota/`, {
+    const res = await fetch(config.otaUrl, {
       method: 'POST',
       headers: {
         'Device-Id': deviceId,

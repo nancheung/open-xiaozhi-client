@@ -7,6 +7,7 @@ export interface ConversationState {
   appendPendingUserAudio: (chunk: Uint8Array) => void
   commitUserMessage: (text: string) => void
   startAssistantMessage: (text: string) => void
+  appendAssistantText: (text: string) => void
   appendAssistantAudio: (chunk: Uint8Array) => void
   finalizeAssistantMessage: () => void
   clearConversation: () => void
@@ -49,6 +50,16 @@ export const createConversationSlice: StateCreator<ConversationState, [], [], Co
         },
       ],
     })),
+
+  appendAssistantText: (text) =>
+    set((s) => {
+      if (s.messages.length === 0) return s
+      const last = s.messages[s.messages.length - 1]
+      if (last.role !== 'assistant') return s
+      const sep = last.text ? ' ' : ''
+      const updated = { ...last, text: last.text + sep + text }
+      return { messages: [...s.messages.slice(0, -1), updated] }
+    }),
 
   appendAssistantAudio: (chunk) =>
     set((s) => {

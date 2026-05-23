@@ -14,14 +14,14 @@ export default function App() {
       <ConnectionHeader />
       <Group orientation="horizontal" className="flex-1 overflow-hidden">
         {/* 左栏：客户端模拟 */}
-        <Panel defaultSize={42} minSize={20} maxSize={70} className="flex flex-col overflow-hidden">
+        <Panel defaultSize="42%" minSize="20%" maxSize="70%" className="flex flex-col overflow-hidden">
           <ClientView />
         </Panel>
 
-        <Separator className="w-1.5 bg-border hover:bg-primary/60 transition-colors cursor-col-resize shrink-0" />
+        <Separator className="w-1.5 bg-border hover:bg-primary/60 transition-colors cursor-col-resize" />
 
         {/* 右栏：调试面板 */}
-        <Panel minSize={30} className="flex flex-col overflow-hidden">
+        <Panel minSize="30%" className="flex flex-col overflow-hidden">
           <Tabs defaultValue="log" className="flex flex-col flex-1 overflow-hidden">
             <div className="px-4 pt-2 border-b shrink-0">
               <TabsList className="h-8">

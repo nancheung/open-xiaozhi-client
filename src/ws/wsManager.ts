@@ -165,7 +165,7 @@ function handleText(raw: string): void {
 
   if (isLLMMessage(msg)) {
     store().setEmotion(msg.emotion, EMOTION_MAP[msg.emotion] ?? '😶')
-    store().startAssistantMessage(msg.text)
+    store().startAssistantMessage('')
     return
   }
 
@@ -174,6 +174,7 @@ function handleText(raw: string): void {
       store().setAudioStatus('playing')
     } else if (msg.state === 'sentence_start' && msg.text) {
       store().setTTSText(msg.text)
+      store().appendAssistantText(msg.text)
     } else if (msg.state === 'stop') {
       store().setAudioStatus('idle')
       store().setTTSText('')

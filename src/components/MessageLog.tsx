@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { Play, Square } from 'lucide-react'
 import { useStore } from '../store'
 import { ScrollArea } from './ui/scroll-area'
 import { Button } from './ui/button'
 import type { LogEntry, LogDirection } from '../features/protocol/protocolSlice'
-import { decodeChunksForPlayback } from '../features/audio/opusDecoder'
+import { useAudioPlayback } from '../hooks/useAudioPlayback'
 
 function formatTime(ts: number): string {
   return new Date(ts).toLocaleTimeString('zh-CN', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })
@@ -25,7 +25,7 @@ const DIR_CLASS: Record<LogDirection, string> = {
 function LogRow({ entry, onPlay, playingId }: {
   entry: LogEntry
   onPlay?: (entry: LogEntry) => void
-  playingId?: number | null
+  playingId?: string | number | null
 }) {
   const { direction, timestamp, data } = entry
   const text = typeof data === 'string' ? data : JSON.stringify(data)
@@ -53,57 +53,18 @@ function LogRow({ entry, onPlay, playingId }: {
 export function MessageLog() {
   const log = useStore(s => s.log)
   const clearLog = useStore(s => s.clearLog)
-  const downstreamSampleRate = useStore(s => s.downstreamSampleRate)
-  const uploadSampleRate = useStore(s => s.helloAudio.sample_rate)
   const bottomRef = useRef<HTMLDivElement>(null)
-  const playbackCtxRef = useRef<AudioContext | null>(null)
-  const [playingId, setPlayingId] = useState<number | null>(null)
+  const { play, playingId } = useAudioPlayback()
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [log.length])
 
-  const handlePlay = useCallback((entry: LogEntry) => {
-    // stop current playback
-    if (playbackCtxRef.current) {
-      void playbackCtxRef.current.close()
-      playbackCtxRef.current = null
-      setPlayingId(null)
-      if (playingId === entry.id) return
-    }
-
+  function handlePlay(entry: LogEntry) {
     if (!entry.audioChunks?.length) return
-    const sampleRate = entry.direction === 'binary-in' ? downstreamSampleRate : uploadSampleRate
-
-    try {
-      const float32 = decodeChunksForPlayback(entry.audioChunks, sampleRate)
-      const ctx = new AudioContext({ sampleRate })
-      playbackCtxRef.current = ctx
-
-      const buffer = ctx.createBuffer(1, float32.length, sampleRate)
-      buffer.copyToChannel(float32 as Float32Array<ArrayBuffer>, 0)
-
-      const source = ctx.createBufferSource()
-      source.buffer = buffer
-      source.connect(ctx.destination)
-      source.start()
-      setPlayingId(entry.id)
-
-      source.onended = () => {
-        void ctx.close()
-        playbackCtxRef.current = null
-        setPlayingId(null)
-      }
-    } catch (e) {
-      console.error('[MessageLog] play error:', e)
-      setPlayingId(null)
-    }
-  }, [downstreamSampleRate, uploadSampleRate, playingId])
-
-  // cleanup on unmount
-  useEffect(() => {
-    return () => { void playbackCtxRef.current?.close() }
-  }, [])
+    const direction = entry.direction === 'binary-in' ? 'in' : 'out'
+    play(entry.id, entry.audioChunks, direction)
+  }
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
@@ -112,7 +73,7 @@ export function MessageLog() {
           协议日志 <span className="tabular-nums">({log.length})</span>
         </span>
         <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={clearLog}>
-          清空
+          清空协议日志
         </Button>
       </div>
       <ScrollArea className="flex-1">

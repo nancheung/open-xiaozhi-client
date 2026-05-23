@@ -5,6 +5,7 @@ import { Button } from './ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import { VolumeBar } from './VolumeBar'
 import { WaveformBars } from './WaveformBars'
+import { ConversationHistory } from './ConversationHistory'
 import type { ListenMode } from '../features/audio/audioSlice'
 
 export function ClientView() {
@@ -41,7 +42,8 @@ export function ClientView() {
   }
 
   return (
-    <div className="flex flex-col items-center gap-5 p-5 flex-1 overflow-auto">
+    <div className="flex flex-col flex-1 overflow-hidden">
+      <div className="flex flex-col items-center gap-5 p-5 overflow-auto shrink-0">
       {/* AudioContext 挂起横幅 */}
       {audioContextSuspended && (
         <button
@@ -149,5 +151,8 @@ export function ClientView() {
         )}
       </div>
     </div>
+
+    <ConversationHistory />
+  </div>
   )
 }

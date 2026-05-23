@@ -34,7 +34,7 @@ export async function connect(): Promise<void> {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        application: { version: '1.0.0' },
+        application: { version: __APP_VERSION__ },
         board: { type: 'open-xiaozhi-client' },
       }),
     })
@@ -217,7 +217,7 @@ function handleMcp(msg: MCPMessage): void {
     const resp = buildMCPResponse(sid, {
       jsonrpc: '2.0',
       id: payload.id,
-      result: { serverInfo: { name: 'open-xiaozhi-client', version: '0.1.0' } },
+      result: { serverInfo: { name: 'open-xiaozhi-client', version: __APP_VERSION__ } },
     })
     sendJson(resp)
     store().addLog('out', resp)

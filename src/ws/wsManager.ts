@@ -16,6 +16,25 @@ function store() {
   return useStore.getState()
 }
 
+function finalizeInterruptedAssistantTurn(): void {
+  store().finalizeAssistantMessage()
+}
+
+function hasEmptyOpenAssistantTurn(): boolean {
+  const messages = store().messages
+  if (messages.length === 0) return false
+
+  const last = messages[messages.length - 1]
+  return last.role === 'assistant'
+    && last.audioFinalized === false
+    && last.text === ''
+    && last.audioChunks.length === 0
+}
+
+function isInternalToolSTT(text: string): boolean {
+  return text.trimStart().startsWith('%')
+}
+
 export async function connect(): Promise<void> {
   disconnect()
 
@@ -108,6 +127,7 @@ export async function connect(): Promise<void> {
 
   ws.onclose = (ev) => {
     clearTimers()
+    finalizeInterruptedAssistantTurn()
     const s = store().status
     if (s !== 'error' && s !== 'idle') {
       store().addLog('system', `连接关闭: ${ev.code} ${ev.reason || '正常关闭'}`)
@@ -158,20 +178,24 @@ function handleText(raw: string): void {
   }
 
   if (isSTTMessage(msg)) {
+    const shouldRestoreAssistantTurn = hasEmptyOpenAssistantTurn() && isInternalToolSTT(msg.text)
     store().setSTT(msg.text)
     store().commitUserMessage(msg.text)
+    if (shouldRestoreAssistantTurn) {
+      store().beginAssistantTurn()
+    }
     return
   }
 
   if (isLLMMessage(msg)) {
     store().setEmotion(msg.emotion, EMOTION_MAP[msg.emotion] ?? '😶')
-    store().startAssistantMessage('')
     return
   }
 
   if (isTTSMessage(msg)) {
     if (msg.state === 'start') {
       store().setAudioStatus('playing')
+      store().beginAssistantTurn()
     } else if (msg.state === 'sentence_start' && msg.text) {
       store().setTTSText(msg.text)
       store().appendAssistantText(msg.text)
@@ -282,6 +306,7 @@ export function sendBinary(data: Uint8Array): void {
 
 export function disconnect(): void {
   clearTimers()
+  finalizeInterruptedAssistantTurn()
   if (ws) {
     ws.onclose = null
     ws.onerror = null

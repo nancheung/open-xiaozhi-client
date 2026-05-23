@@ -37,8 +37,24 @@ describe('conversationSlice', () => {
     expect(pendingUserAudio).toHaveLength(0)
   })
 
-  it('startAssistantMessage creates unfinalized assistant message', () => {
-    store.getState().startAssistantMessage('北京今天天气晴朗')
+  it('commitUserMessage finalizes any open assistant turn before appending the user message', () => {
+    store.getState().beginAssistantTurn()
+    store.getState().appendAssistantText('上一段回复')
+
+    store.getState().commitUserMessage('新的用户消息')
+
+    const { messages } = store.getState()
+    expect(messages).toHaveLength(2)
+    expect(messages[0].role).toBe('assistant')
+    expect(messages[0].text).toBe('上一段回复')
+    expect(messages[0].audioFinalized).toBe(true)
+    expect(messages[1].role).toBe('user')
+    expect(messages[1].text).toBe('新的用户消息')
+  })
+
+  it('beginAssistantTurn opens an unfinalized assistant message that can receive text', () => {
+    store.getState().beginAssistantTurn()
+    store.getState().appendAssistantText('北京今天天气晴朗')
     const msg = store.getState().messages[0]
     expect(msg.role).toBe('assistant')
     expect(msg.text).toBe('北京今天天气晴朗')
@@ -47,7 +63,8 @@ describe('conversationSlice', () => {
   })
 
   it('appendAssistantAudio adds chunks to last assistant message', () => {
-    store.getState().startAssistantMessage('回复')
+    store.getState().beginAssistantTurn()
+    store.getState().appendAssistantText('回复')
     store.getState().appendAssistantAudio(new Uint8Array([10]))
     store.getState().appendAssistantAudio(new Uint8Array([20]))
     expect(store.getState().messages[0].audioChunks).toHaveLength(2)
@@ -59,11 +76,95 @@ describe('conversationSlice', () => {
     expect(store.getState().messages[0].audioChunks).toHaveLength(0) // user audio unchanged
   })
 
-  it('finalizeAssistantMessage marks last assistant message as finalized', () => {
-    store.getState().startAssistantMessage('回复')
+  it('finalizeAssistantMessage marks all open assistant messages as finalized', () => {
+    store.setState({
+      messages: [
+        {
+          id: 'assistant-1',
+          role: 'assistant',
+          text: '第一段回复',
+          timestamp: 1,
+          audioChunks: [],
+          audioFinalized: false,
+        },
+        {
+          id: 'user-1',
+          role: 'user',
+          text: '用户消息',
+          timestamp: 2,
+          audioChunks: [],
+          audioFinalized: true,
+        },
+        {
+          id: 'assistant-2',
+          role: 'assistant',
+          text: '第二段回复',
+          timestamp: 3,
+          audioChunks: [new Uint8Array([1])],
+          audioFinalized: false,
+        },
+      ],
+    })
+
     store.getState().appendAssistantAudio(new Uint8Array([1]))
     store.getState().finalizeAssistantMessage()
-    expect(store.getState().messages[0].audioFinalized).toBe(true)
+    const assistantMessages = store.getState().messages.filter(message => message.role === 'assistant')
+    expect(assistantMessages).toHaveLength(2)
+    expect(assistantMessages.every(message => message.audioFinalized)).toBe(true)
+  })
+
+  it('finalizeAssistantMessage removes an empty open assistant message with no text or audio', () => {
+    store.getState().beginAssistantTurn()
+
+    store.getState().finalizeAssistantMessage()
+
+    expect(store.getState().messages).toHaveLength(0)
+  })
+
+  it('finalizeAssistantMessage preserves an audio-only assistant message', () => {
+    store.getState().beginAssistantTurn()
+    store.getState().appendAssistantAudio(new Uint8Array([1]))
+
+    store.getState().finalizeAssistantMessage()
+
+    const { messages } = store.getState()
+    expect(messages).toHaveLength(1)
+    expect(messages[0].role).toBe('assistant')
+    expect(messages[0].text).toBe('')
+    expect(messages[0].audioChunks).toHaveLength(1)
+    expect(messages[0].audioFinalized).toBe(true)
+  })
+
+  it('commitUserMessage finalizes every stale open assistant message before appending the user message', () => {
+    store.setState({
+      messages: [
+        {
+          id: 'assistant-1',
+          role: 'assistant',
+          text: '第一段回复',
+          timestamp: 1,
+          audioChunks: [],
+          audioFinalized: false,
+        },
+        {
+          id: 'assistant-2',
+          role: 'assistant',
+          text: '第二段回复',
+          timestamp: 2,
+          audioChunks: [],
+          audioFinalized: false,
+        },
+      ],
+    })
+
+    store.getState().commitUserMessage('新的用户消息')
+
+    const { messages } = store.getState()
+    expect(messages).toHaveLength(3)
+    expect(messages[0].audioFinalized).toBe(true)
+    expect(messages[1].audioFinalized).toBe(true)
+    expect(messages[2].role).toBe('user')
+    expect(messages[2].text).toBe('新的用户消息')
   })
 
   it('clearConversation removes all messages and pending audio', () => {
@@ -72,5 +173,18 @@ describe('conversationSlice', () => {
     store.getState().clearConversation()
     expect(store.getState().messages).toHaveLength(0)
     expect(store.getState().pendingUserAudio).toHaveLength(0)
+  })
+
+  it('beginAssistantTurn creates only one open assistant message until finalized', () => {
+    store.getState().beginAssistantTurn()
+    store.getState().beginAssistantTurn()
+    expect(store.getState().messages).toHaveLength(1)
+    expect(store.getState().messages[0].role).toBe('assistant')
+    expect(store.getState().messages[0].audioFinalized).toBe(false)
+
+    store.getState().appendAssistantText('第一段回复')
+    store.getState().finalizeAssistantMessage()
+    store.getState().beginAssistantTurn()
+    expect(store.getState().messages).toHaveLength(2)
   })
 })

@@ -30,7 +30,9 @@ export function useConnection() {
     if (!sessionId) return
     const msg = buildAbort(sessionId)
     sendJson(msg)
-    useStore.getState().addLog('out', msg)
+    const store = useStore.getState()
+    store.addLog('out', msg)
+    store.finalizeAssistantMessage()
   }, [sessionId])
 
   const sendUpdate = useCallback((secret: string) => {

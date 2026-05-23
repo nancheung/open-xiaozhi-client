@@ -4,6 +4,7 @@ import { encodeFloat32ToOpus, disposeEncoder } from '../features/audio/opusEncod
 import { decodeOpusToFloat32 } from '../features/audio/opusDecoder'
 import { createRecordingProcessorUrl } from '../features/audio/recordingProcessor'
 import { sendBinary } from '../ws/wsManager'
+import { registerGainNode } from '../features/mcp/audioControl'
 
 export function useAudio() {
   const playbackCtxRef = useRef<AudioContext | null>(null)
@@ -35,6 +36,7 @@ export function useAudio() {
       playbackCtxRef.current = ctx
       playbackMasterGainRef.current = masterGain
       playbackAnalyserRef.current = analyser
+      registerGainNode(masterGain)
       nextPlayTimeRef.current = 0
 
       const onStateChange = () => {
@@ -144,6 +146,7 @@ export function useAudio() {
       playbackCtxRef.current = null
       playbackMasterGainRef.current = null
       playbackAnalyserRef.current = null
+      registerGainNode(null)
     }
   }, [])
 

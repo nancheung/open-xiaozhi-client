@@ -1,3 +1,5 @@
+import { getAppVolume, setAppVolume } from './audioControl'
+
 export interface ToolDefinition {
   name: string
   description: string
@@ -8,19 +10,9 @@ export interface ToolDefinition {
   }
 }
 
-export interface McpMockState {
-  volume: number
-  brightness: number
-  theme: 'light' | 'dark'
-  battery: { level: number; charging: boolean }
-  network: { connected: boolean; ssid: string; rssi: number }
-  forceError: boolean
-}
-
 export interface ToolResult {
   content: Array<{ type: 'text'; text: string }>
   isError: boolean
-  newState?: Partial<McpMockState>  // 需要更新的状态
 }
 
 export const TOOL_DEFINITIONS: ToolDefinition[] = [
@@ -58,17 +50,17 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   },
   {
     name: 'self.get_system_info',
-    description: '获取系统信息（固件版本、运行时间等）',
+    description: '获取系统信息（浏览器、语言、屏幕分辨率、运行时间等）',
     inputSchema: { type: 'object', properties: {}, required: [] },
   },
   {
     name: 'self.reboot',
-    description: '重启设备',
+    description: '重启设备（刷新页面）',
     inputSchema: { type: 'object', properties: {}, required: [] },
   },
   {
     name: 'self.upgrade_firmware',
-    description: '升级固件',
+    description: '升级固件（在新标签页打开下载链接）',
     inputSchema: {
       type: 'object',
       properties: { url: { type: 'string', description: '固件下载地址' } },
@@ -77,41 +69,102 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   },
 ]
 
-export function handleToolCall(
+function getBrightness(): number {
+  const filter = document.documentElement.style.filter
+  const match = filter.match(/brightness\(([\d.]+)%?\)/)
+  return match ? Math.round(parseFloat(match[1])) : 100
+}
+
+function setBrightness(brightness: number): void {
+  document.documentElement.style.filter = brightness < 100 ? `brightness(${brightness}%)` : ''
+}
+
+function getTheme(): 'light' | 'dark' {
+  return document.documentElement.classList.contains('dark') ? 'dark' : 'light'
+}
+
+function setTheme(theme: 'light' | 'dark'): void {
+  if (theme === 'dark') {
+    document.documentElement.classList.add('dark')
+  } else {
+    document.documentElement.classList.remove('dark')
+  }
+}
+
+type BatteryManager = { level: number; charging: boolean }
+type NavigatorWithBattery = Navigator & { getBattery?(): Promise<BatteryManager> }
+
+export async function handleToolCall(
   name: string,
   args: Record<string, unknown>,
-  state: McpMockState
-): ToolResult {
-  if (state.forceError) {
-    return { content: [{ type: 'text', text: '设备返回强制错误（测试模式）' }], isError: true }
-  }
-
+): Promise<ToolResult> {
   switch (name) {
-    case 'self.get_device_status':
+    case 'self.get_device_status': {
+      let battery: { level: number; charging: boolean } | undefined
+      try {
+        const nav = navigator as NavigatorWithBattery
+        if (typeof nav.getBattery === 'function') {
+          const bat = await nav.getBattery()
+          battery = { level: Math.round(bat.level * 100), charging: bat.charging }
+        }
+      } catch { /* getBattery not available in this browser */ }
+
       return {
         isError: false,
         content: [{
           type: 'text',
           text: JSON.stringify({
-            volume: state.volume,
-            screen: { brightness: state.brightness, theme: state.theme },
-            battery: state.battery,
-            network: state.network,
+            volume: getAppVolume(),
+            screen: { brightness: getBrightness(), theme: getTheme() },
+            ...(battery !== undefined ? { battery } : {}),
+            network: { connected: navigator.onLine },
           }),
         }],
       }
-    case 'self.audio_speaker.set_volume':
-      return { isError: false, content: [{ type: 'text', text: 'true' }], newState: { volume: args.volume as number } }
-    case 'self.screen.set_brightness':
-      return { isError: false, content: [{ type: 'text', text: 'true' }], newState: { brightness: args.brightness as number } }
-    case 'self.screen.set_theme':
-      return { isError: false, content: [{ type: 'text', text: 'true' }], newState: { theme: args.theme as 'light' | 'dark' } }
-    case 'self.get_system_info':
-      return { isError: false, content: [{ type: 'text', text: JSON.stringify({ firmware: '1.0.0', uptime: 3600 }) }] }
-    case 'self.reboot':
-      return { isError: false, content: [{ type: 'text', text: '设备重启中...' }] }
-    case 'self.upgrade_firmware':
-      return { isError: false, content: [{ type: 'text', text: `固件升级已启动: ${args.url}` }] }
+    }
+
+    case 'self.audio_speaker.set_volume': {
+      setAppVolume(args.volume as number)
+      return { isError: false, content: [{ type: 'text', text: 'true' }] }
+    }
+
+    case 'self.screen.set_brightness': {
+      setBrightness(args.brightness as number)
+      return { isError: false, content: [{ type: 'text', text: 'true' }] }
+    }
+
+    case 'self.screen.set_theme': {
+      setTheme(args.theme as 'light' | 'dark')
+      return { isError: false, content: [{ type: 'text', text: 'true' }] }
+    }
+
+    case 'self.get_system_info': {
+      return {
+        isError: false,
+        content: [{
+          type: 'text',
+          text: JSON.stringify({
+            userAgent: navigator.userAgent,
+            language: navigator.language,
+            cores: navigator.hardwareConcurrency ?? null,
+            screen: { width: screen.width, height: screen.height },
+            uptime: Math.round(performance.now() / 1000),
+          }),
+        }],
+      }
+    }
+
+    case 'self.reboot': {
+      setTimeout(() => location.reload(), 300)
+      return { isError: false, content: [{ type: 'text', text: '页面刷新中...' }] }
+    }
+
+    case 'self.upgrade_firmware': {
+      const url = args.url as string
+      window.open(url, '_blank', 'noopener,noreferrer')
+      return { isError: false, content: [{ type: 'text', text: `已在新窗口打开: ${url}` }] }
+    }
+
     default:
       return { isError: true, content: [{ type: 'text', text: `未知工具: ${name}` }] }
   }

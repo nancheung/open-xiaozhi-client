@@ -236,18 +236,17 @@ function handleMcp(msg: MCPMessage): void {
   // tools/call request from server
   if (payload.method === 'tools/call') {
     const params = payload.params as { name: string; arguments?: Record<string, unknown> }
-    const result = handleToolCall(params.name, params.arguments ?? {}, store().mockState)
-    if (result.newState) store().updateMockState(result.newState)
-
-    const responsePayload: MCPMessage['payload'] = { jsonrpc: '2.0', id: payload.id }
-    if (result.isError) {
-      responsePayload.error = { message: result.content[0].text }
-    } else {
-      responsePayload.result = { content: result.content }
-    }
-    const resp = buildMCPResponse(sid, responsePayload)
-    sendJson(resp)
-    store().addLog('out', resp)
+    handleToolCall(params.name, params.arguments ?? {}).then(result => {
+      const responsePayload: MCPMessage['payload'] = { jsonrpc: '2.0', id: payload.id }
+      if (result.isError) {
+        responsePayload.error = { message: result.content[0].text }
+      } else {
+        responsePayload.result = { content: result.content }
+      }
+      const resp = buildMCPResponse(sid, responsePayload)
+      sendJson(resp)
+      store().addLog('out', resp)
+    })
     return
   }
 

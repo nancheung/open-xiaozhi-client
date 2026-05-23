@@ -1,3 +1,4 @@
+import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
 import { ConnectionHeader } from './components/ConnectionHeader'
 import { ClientView } from './components/ClientView'
 import { MessageLog } from './components/MessageLog'
@@ -8,18 +9,19 @@ import { SettingsPanel } from './components/SettingsPanel'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs'
 
 export default function App() {
-
   return (
     <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden">
       <ConnectionHeader />
-      <div className="flex flex-1 overflow-hidden">
+      <PanelGroup direction="horizontal" className="flex-1 overflow-hidden">
         {/* 左栏：客户端模拟 */}
-        <div className="w-64 border-r flex flex-col shrink-0 overflow-hidden">
+        <Panel defaultSize={42} minSize={20} maxSize={70} className="flex flex-col overflow-hidden">
           <ClientView />
-        </div>
+        </Panel>
+
+        <PanelResizeHandle className="w-1.5 bg-border hover:bg-primary/60 transition-colors cursor-col-resize shrink-0" />
 
         {/* 右栏：调试面板 */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <Panel minSize={30} className="flex flex-col overflow-hidden">
           <Tabs defaultValue="log" className="flex flex-col flex-1 overflow-hidden">
             <div className="px-4 pt-2 border-b shrink-0">
               <TabsList className="h-8">
@@ -29,7 +31,6 @@ export default function App() {
                 <TabsTrigger value="settings" className="text-xs h-7">设置</TabsTrigger>
               </TabsList>
             </div>
-
             <TabsContent value="log" className="flex-1 flex flex-col overflow-hidden mt-0 border-0">
               <MessageLog />
               <ProtocolControls />
@@ -44,8 +45,8 @@ export default function App() {
               <SettingsPanel />
             </TabsContent>
           </Tabs>
-        </div>
-      </div>
+        </Panel>
+      </PanelGroup>
     </div>
   )
 }

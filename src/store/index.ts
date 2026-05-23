@@ -7,9 +7,11 @@ import { createAudioSlice, type AudioState } from '../features/audio/audioSlice'
 import { createIotSlice, type IotState } from '../features/iot/iotSlice'
 import { createDeviceIdentitySlice, type DeviceIdentityState } from '../features/device/deviceIdentitySlice'
 import { createActivationSlice, type ActivationState } from '../features/activation/activationSlice'
+import { createConversationSlice, type ConversationState } from '../features/conversation/conversationSlice'
 
 export type AppState =
-  ConnectionState & SettingsState & ProtocolState & McpState & AudioState & IotState & DeviceIdentityState & ActivationState
+  ConnectionState & SettingsState & ProtocolState & McpState & AudioState &
+  IotState & DeviceIdentityState & ActivationState & ConversationState
 
 export const useStore = create<AppState>()((...args) => ({
   ...createConnectionSlice(...args),
@@ -20,4 +22,5 @@ export const useStore = create<AppState>()((...args) => ({
   ...createIotSlice(...args),
   ...createDeviceIdentitySlice(...args),
   ...createActivationSlice(...args),
+  ...createConversationSlice(...args),
 }))

@@ -159,11 +159,13 @@ function handleText(raw: string): void {
 
   if (isSTTMessage(msg)) {
     store().setSTT(msg.text)
+    store().commitUserMessage(msg.text)
     return
   }
 
   if (isLLMMessage(msg)) {
     store().setEmotion(msg.emotion, EMOTION_MAP[msg.emotion] ?? '😶')
+    store().startAssistantMessage(msg.text)
     return
   }
 
@@ -175,6 +177,7 @@ function handleText(raw: string): void {
     } else if (msg.state === 'stop') {
       store().setAudioStatus('idle')
       store().setTTSText('')
+      store().finalizeAssistantMessage()
     }
     return
   }
@@ -259,6 +262,7 @@ function handleMcp(msg: MCPMessage): void {
 
 function handleBinary(data: Uint8Array): void {
   store().addBinaryLog('binary-in', data)
+  store().appendAssistantAudio(data)
   window.dispatchEvent(new CustomEvent('ws:audio', { detail: data }))
 }
 

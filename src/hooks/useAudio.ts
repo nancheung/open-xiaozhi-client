@@ -103,6 +103,7 @@ export function useAudio() {
           const encoded = encodeFloat32ToOpus(e.data.data)
           sendBinary(encoded)
           useStore.getState().addBinaryLog('binary-out', encoded)
+          useStore.getState().appendPendingUserAudio(encoded)
         }
       }
 

@@ -259,7 +259,7 @@ function handleMcp(msg: MCPMessage): void {
 }
 
 function handleBinary(data: Uint8Array): void {
-  store().addLog('binary-in', `[binary ${data.byteLength} bytes]`)
+  store().addBinaryLog('binary-in', data)
   window.dispatchEvent(new CustomEvent('ws:audio', { detail: data }))
 }
 

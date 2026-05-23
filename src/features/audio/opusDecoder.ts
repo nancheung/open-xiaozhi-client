@@ -34,3 +34,28 @@ export function disposeDecoder() {
   decoder?.delete()
   decoder = null
 }
+
+/** 用于回放：用临时解码器将多个 opus 帧拼接解码为 Float32 PCM */
+export function decodeChunksForPlayback(chunks: Uint8Array[], sampleRate: number): Float32Array {
+  const tempDecoder = new OpusScript(sampleRate as ValidSamplingRate, 1, OpusScript.Application.AUDIO, { wasm: false })
+  try {
+    const pcmArrays: Float32Array[] = []
+    let totalLength = 0
+    for (const chunk of chunks) {
+      const int16Buf = tempDecoder.decode(chunk as unknown as Buffer)
+      const int16 = new Int16Array(int16Buf.buffer, int16Buf.byteOffset, int16Buf.byteLength / 2)
+      const float32 = int16ToFloat32(int16)
+      pcmArrays.push(float32)
+      totalLength += float32.length
+    }
+    const result = new Float32Array(totalLength)
+    let offset = 0
+    for (const arr of pcmArrays) {
+      result.set(arr, offset)
+      offset += arr.length
+    }
+    return result
+  } finally {
+    tempDecoder.delete()
+  }
+}

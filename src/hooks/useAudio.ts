@@ -100,7 +100,7 @@ export function useAudio() {
         if (e.data.type === 'pcm') {
           const encoded = encodeFloat32ToOpus(e.data.data)
           sendBinary(encoded)
-          useStore.getState().addLog('binary-out', `[binary ${encoded.byteLength} bytes]`)
+          useStore.getState().addBinaryLog('binary-out', encoded)
         }
       }
 

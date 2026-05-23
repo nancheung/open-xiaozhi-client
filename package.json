@@ -1,5 +1,9 @@
 {
   "name": "open-xiaozhi-client-webui",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nancheung/open-xiaozhi-client.git"
+  },
   "version": "0.1.1",
   "type": "module",
   "bin": {

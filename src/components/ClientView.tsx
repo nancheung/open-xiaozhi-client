@@ -17,6 +17,7 @@ export function ClientView() {
   const ttsText = useStore(s => s.ttsText)
   const audioStatus = useStore(s => s.audioStatus)
   const listenMode = useStore(s => s.listenMode)
+  const isTTSActive = useStore(s => s.isTTSActive)
   const status = useStore(s => s.status)
   const audioError = useStore(s => s.audioError)
   const audioContextSuspended = useStore(s => s.audioContextSuspended)
@@ -28,7 +29,7 @@ export function ClientView() {
 
   const isReady = status === 'ready'
   const isRecording = audioStatus === 'recording'
-  const isPlaying = audioStatus === 'playing'
+  const isPlaying = isTTSActive
 
   function handleMicClick() {
     if (!isReady && !isRecording) return
@@ -36,6 +37,8 @@ export function ClientView() {
       sendListen('stop')
       setAudioStatus('idle')
     } else {
+      // TTS 播放时点击麦克风 = 打断：先 abort，再开始录音
+      if (isTTSActive) sendAbort()
       sendListen('start', { mode: listenMode })
       setAudioStatus('recording')
     }

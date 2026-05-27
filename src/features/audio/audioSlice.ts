@@ -7,6 +7,7 @@ export type ListenMode = 'auto' | 'manual' | 'realtime'
 export interface AudioState {
   audioStatus: AudioStatus
   listenMode: ListenMode
+  isTTSActive: boolean               // TTS 播放期间为 true（与 audioStatus 解耦，供实时模式使用）
   sttText: string
   ttsText: string        // 当前字幕（sentence_start 的 text）
   emotion: EmotionType
@@ -16,6 +17,7 @@ export interface AudioState {
   // actions
   setAudioStatus: (s: AudioStatus) => void
   setListenMode: (m: ListenMode) => void
+  setIsTTSActive: (v: boolean) => void
   setSTT: (text: string) => void
   setTTSText: (text: string) => void
   setEmotion: (emotion: EmotionType, emoji: string) => void
@@ -27,6 +29,7 @@ export interface AudioState {
 export const createAudioSlice: StateCreator<AudioState> = (set) => ({
   audioStatus: 'idle',
   listenMode: 'auto',
+  isTTSActive: false,
   sttText: '',
   ttsText: '',
   emotion: 'neutral',
@@ -35,10 +38,11 @@ export const createAudioSlice: StateCreator<AudioState> = (set) => ({
   audioContextSuspended: false,
   setAudioStatus: (audioStatus) => set({ audioStatus }),
   setListenMode: (listenMode) => set({ listenMode }),
+  setIsTTSActive: (isTTSActive) => set({ isTTSActive }),
   setSTT: (sttText) => set({ sttText }),
   setTTSText: (ttsText) => set({ ttsText }),
   setEmotion: (emotion, emotionEmoji) => set({ emotion, emotionEmoji }),
   setAudioError: (audioError) => set({ audioError }),
   setAudioContextSuspended: (audioContextSuspended) => set({ audioContextSuspended }),
-  resetAudio: () => set({ audioStatus: 'idle', sttText: '', ttsText: '' }),
+  resetAudio: () => set({ audioStatus: 'idle', isTTSActive: false, sttText: '', ttsText: '' }),
 })

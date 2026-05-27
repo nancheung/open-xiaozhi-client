@@ -1,7 +1,7 @@
 import {
   isServerHello, isSTTMessage, isLLMMessage, isTTSMessage,
   isMCPMessage, isIoTCommand, isPongMessage, isAlertMessage,
-  isServerResultMessage, EMOTION_MAP, buildPing, buildMCPResponse,
+  isServerResultMessage, EMOTION_MAP, buildPing, buildMCPResponse, buildListen,
   type MCPMessage,
 } from '../features/protocol/types'
 import { initDecoder } from '../features/audio/opusDecoder'
@@ -11,6 +11,8 @@ import { useStore } from '../store'
 let ws: WebSocket | null = null
 let heartbeatTimer: ReturnType<typeof setInterval> | null = null
 let handshakeTimer: ReturnType<typeof setTimeout> | null = null
+// 自动模式：TTS 开始时正在录音，则 TTS 结束后自动重启监听
+let autoRestartListening = false
 
 function store() {
   return useStore.getState()
@@ -194,15 +196,49 @@ function handleText(raw: string): void {
 
   if (isTTSMessage(msg)) {
     if (msg.state === 'start') {
-      store().setAudioStatus('playing')
+      const listenMode = store().listenMode
+      store().setIsTTSActive(true)
       store().beginAssistantTurn()
+      if (listenMode === 'realtime') {
+        // 全双工：保持 audioStatus='recording'，麦克风持续采集发送
+        autoRestartListening = false
+      } else {
+        // 半双工：停止录音；自动模式且当前正在录音时标记需要重启
+        autoRestartListening = (listenMode === 'auto' && store().audioStatus === 'recording')
+        store().setAudioStatus('playing')
+      }
     } else if (msg.state === 'sentence_start' && msg.text) {
       store().setTTSText(msg.text)
       store().appendAssistantText(msg.text)
     } else if (msg.state === 'stop') {
-      store().setAudioStatus('idle')
+      store().setIsTTSActive(false)
       store().setTTSText('')
       store().finalizeAssistantMessage()
+
+      if (autoRestartListening) {
+        autoRestartListening = false
+        // 只有 audioStatus 仍为 'playing' 时才自动重启。
+        // 若用户已点击麦克风（audioStatus='recording'）或中断按钮（audioStatus='idle'），
+        // 说明用户已主动介入，保持当前状态不变。
+        if (store().audioStatus === 'playing') {
+          const sid = store().sessionId
+          if (sid) {
+            const restartMsg = buildListen('start', sid, { mode: 'auto' })
+            sendJson(restartMsg)
+            store().addLog('out', restartMsg)
+            store().setAudioStatus('recording')
+          } else {
+            store().setAudioStatus('idle')
+          }
+        }
+      } else if (store().listenMode === 'realtime') {
+        // 实时模式：audioStatus 从未被改变，保持 'recording'，无缝进入下一轮
+      } else {
+        // 手动模式：若用户已打断并开始新录音（audioStatus='recording'），不干预
+        if (store().audioStatus === 'playing') {
+          store().setAudioStatus('idle')
+        }
+      }
     }
     return
   }
@@ -305,6 +341,7 @@ export function sendBinary(data: Uint8Array): void {
 }
 
 export function disconnect(): void {
+  autoRestartListening = false
   clearTimers()
   finalizeInterruptedAssistantTurn()
   if (ws) {

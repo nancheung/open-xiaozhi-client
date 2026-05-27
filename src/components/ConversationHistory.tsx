@@ -88,7 +88,17 @@ function AssistantBubble({ msg, emotionEmoji, playingId, onPlay }: {
   )
 }
 
-export function ConversationHistory() {
+interface Props {
+  /**
+   * When true, hides the built-in "对话历史 / 清空对话" header and instead
+   * shows a small floating "清空" button at the top-right (only when there
+   * are messages). Used by the wide layout where the conversation is shown
+   * full-bleed and ClientView's command center holds the global controls.
+   */
+  hideHeader?: boolean
+}
+
+export function ConversationHistory({ hideHeader = false }: Props = {}) {
   const messages = useStore(s => s.messages)
   const clearConversation = useStore(s => s.clearConversation)
   const emotionEmoji = useStore(s => s.emotionEmoji)
@@ -100,22 +110,32 @@ export function ConversationHistory() {
   }, [messages.length])
 
   return (
-    <div className="flex flex-col flex-1 overflow-hidden border-t">
-      <div className="flex items-center justify-between px-3 py-1.5 shrink-0">
-        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
-          对话历史
-        </span>
-        {messages.length > 0 && (
-          <button
-            onClick={clearConversation}
-            className="text-[10px] text-muted-foreground/50 hover:text-muted-foreground transition-colors"
-          >
-            清空对话
-          </button>
-        )}
-      </div>
+    <div className={`flex flex-col flex-1 overflow-hidden ${hideHeader ? '' : 'border-t'} relative`}>
+      {!hideHeader && (
+        <div className="flex items-center justify-between px-3 py-1.5 shrink-0">
+          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+            对话历史
+          </span>
+          {messages.length > 0 && (
+            <button
+              onClick={clearConversation}
+              className="text-[10px] text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+            >
+              清空对话
+            </button>
+          )}
+        </div>
+      )}
+      {hideHeader && messages.length > 0 && (
+        <button
+          onClick={clearConversation}
+          className="absolute top-3 right-4 z-10 text-[11px] text-muted-foreground hover:text-foreground bg-background/85 backdrop-blur border border-border rounded-md px-2.5 py-1 transition-colors"
+        >
+          清空对话
+        </button>
+      )}
       <ScrollArea className="flex-1">
-        <div className="flex flex-col gap-3 px-3 pb-4">
+        <div className="flex flex-col gap-3 px-3 pb-4 pt-2">
           {messages.length === 0 && (
             <p className="text-xs text-muted-foreground/40 text-center py-6 italic">
               连接后开始对话，历史将显示在这里

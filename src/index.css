@@ -81,3 +81,16 @@
     @apply bg-background text-foreground;
   }
 }
+
+@keyframes cv-blink {
+  0%, 50% { opacity: 1 }
+  51%, 100% { opacity: .3 }
+}
+@keyframes cv-breathe {
+  0%, 100% { transform: scale(1); opacity: .92 }
+  50% { transform: scale(1.06); opacity: 1 }
+}
+@keyframes cv-wave {
+  0%, 100% { transform: scaleY(.25) }
+  50% { transform: scaleY(1) }
+}

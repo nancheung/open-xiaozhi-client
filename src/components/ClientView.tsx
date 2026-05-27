@@ -196,16 +196,28 @@ export function ClientView() {
     <div className="border-t bg-card px-3 py-2.5 shrink-0">
       {typingStrip}
       <div className="flex items-center gap-2">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-9 w-9 shrink-0"
-          onClick={handleCycleMode}
-          disabled={isRecording}
-          title={`${mode.label} · 点击切换`}
-        >
-          <ModeIcon className="h-4 w-4" />
-        </Button>
+        {(isPlaying || isRecording) && listenMode !== 'realtime' ? (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 shrink-0"
+            onClick={() => { sendAbort(); setAudioStatus('idle') }}
+            title="中断"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        ) : (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 shrink-0"
+            onClick={handleCycleMode}
+            disabled={isRecording}
+            title={`${mode.label} · 点击切换`}
+          >
+            <ModeIcon className="h-4 w-4" />
+          </Button>
+        )}
         <div className="flex-1 text-center leading-tight">
           <div className={`text-xs font-medium ${isRecording ? 'text-destructive' : 'text-muted-foreground'}`}>
             {isRecording ? '点击结束' : isPlaying ? '点击打断' : '点击说话'}
@@ -230,23 +242,9 @@ export function ClientView() {
           {isRecording ? <Square className="h-5 w-5" fill="currentColor" /> : <Mic className="h-5 w-5" />}
         </button>
       </div>
-      {isRecording && (
-        <div className="flex justify-center mt-2">
-          <VolumeBar analyser={recordingAnalyserRef.current} />
-        </div>
-      )}
-      {(isReady || isRecording) && listenMode !== 'realtime' && (
-        <div className="flex justify-center mt-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 text-[11px] text-muted-foreground"
-            onClick={() => { sendAbort(); setAudioStatus('idle') }}
-          >
-            中断
-          </Button>
-        </div>
-      )}
+      <div className={`flex justify-center mt-2 ${isRecording ? 'visible' : 'invisible'}`}>
+        <VolumeBar analyser={recordingAnalyserRef.current} />
+      </div>
     </div>
   )
 

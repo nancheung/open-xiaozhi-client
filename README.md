@@ -3,8 +3,10 @@
 ![WebUI](https://img.shields.io/badge/WebUI-Available-22c55e?style=flat-square)
 ![Xiaozhi](https://img.shields.io/badge/Xiaozhi-Ecosystem-2563eb?style=flat-square)
 ![Client](https://img.shields.io/badge/Client-Full%20Protocol%20Implementation-7c3aed?style=flat-square)
+![npm](https://img.shields.io/npm/v/open-xiaozhi-client-webui?style=flat-square&color=cb3837)
+![License](https://img.shields.io/badge/License-AGPL--3.0-orange?style=flat-square)
 
-![Open Xiaozhi Client WebUI 项目截图](https://raw.githubusercontent.com/nancheung/open-xiaozhi-client/main/docs/images/open-xiaozhi-client-webui-placeholder.png)
+![Open Xiaozhi Client WebUI 亮色-双栏](https://raw.githubusercontent.com/nancheung/open-xiaozhi-client/main/docs/images/open-xiaozhi-client-webui-placeholder-1.png)
 
 > 🎙️ 面向 **小智生态** 的开源客户端全协议实现。  
 > 让你可以更快地 **学习协议、联调服务端、排查问题、体验小智能力**。
@@ -34,14 +36,16 @@ open-xiaozhi-client-webui
 
 | 能力 | 说明 |
 | --- | --- |
-| 🖥️ WebUI 客户端 | 直接在浏览器中体验小智客户端交互流程 |
+| 🖥️ 响应式 WebUI 客户端 | 宽屏双栏布局（对话历史 + 指令中心）/ 窄屏单栏布局，面板宽度可拖拽调整 |
 | 📡 连接状态查看 | 查看 OTA 获取、连接中、握手中、就绪、播放中等状态变化 |
+| 🎤 三种监听模式 | 对讲机（手动）/ 智能助理（VAD 自动）/ 通话（全双工实时），可随时切换 |
+| 🔊 音频可视化 | 录音音量条 + 播放波形动画，实时反映收发音频状态 |
 | 📋 协议日志面板 | 实时观察 WebSocket 文本帧、二进制帧、系统日志 |
 | 📨 自定义消息发送 | 手动发送 JSON 消息，便于模拟与调试协议行为 |
-| 🔌 IoT 面板 | 编辑 IoT 描述符，查看收到的 IoT 命令 |
-| 🌐 HTTP 面板 | 在连接态下发送服务端管理指令 |
-| ⚙️ 设置面板 | 调整 Hello 参数、音频参数、心跳、日志数量等配置 |
-| 🎤 音频交互体验 | 支持录音、播放、音量波形与基础状态反馈 |
+| 🎛️ 设备控制面板 | 调整音量、屏幕亮度、明暗主题，查看收到的 IoT 命令，设置持久化 |
+| 🌐 HTTP 面板 | 在连接态下发送服务端管理指令（更新配置、重启等） |
+| ⚙️ 设置面板 | 调整 Hello 参数、音频参数、心跳、日志数量等配置，持久化保存 |
+| 🤖 MCP 协议支持 | 客户端作为 MCP Server 响应服务端工具调用（音量、亮度、主题、重启等） |
 
 ## 👥 适合谁
 
@@ -77,18 +81,18 @@ open-xiaozhi-client-webui
 ## ⚡ 快速开始
 
 ```bash
-npm install -g open-xiaozhi-client
-open-xiaozhi-client
+npm install -g open-xiaozhi-client-webui
+open-xiaozhi-client-webui
 ```
 
-命令执行后会自动启动本地服务并打开浏览器，默认访问地址为 `http://127.0.0.1:14100`。按 `Ctrl+C` 退出。
+命令执行后会自动启动本地服务并打开浏览器，默认访问地址为 `http://127.0.0.1:14100`。若端口被占用会自动顺延。按 `Ctrl+C` 退出。
 
 进入页面后，你可以：
 
 1. 在顶部填写服务地址，默认可按小智服务端 OTA 地址格式接入
 2. 点击连接，观察连接状态与握手流程
 3. 在协议日志中查看消息收发
-4. 在 IoT / HTTP / 设置面板中继续联调和排障
+4. 在设备控制 / HTTP / 设置面板中继续联调和排障
 
 ### 源码开发模式
 
@@ -116,7 +120,7 @@ src/
   🧩 components/   WebUI 组件与调试面板
   ⚙️ features/     连接、协议、音频、IoT、MCP、设备等业务状态
   🪝 hooks/        音频与连接相关 Hook
-  🗄️ store/        全局状态管理
+  🗄️ store/        全局状态管理（Zustand slice 模式）
   📡 ws/           WebSocket 管理与协议收发
 ```
 
@@ -135,6 +139,8 @@ src/
 
 - [x] ~~WebUI 调试端~~ ✅
 - [x] ~~面向协议学习与服务端调试的基础交互能力~~ ✅
+- [x] ~~响应式双栏布局 + 三种监听模式~~ ✅
+- [x] ~~MCP 协议支持 + 设备控制面板~~ ✅
 - [ ] 📱 更多客户端形态支持
 - [ ] 🖥️ 更完整的多端体验
 - [ ] 🔄 持续完善小智生态下的客户端能力

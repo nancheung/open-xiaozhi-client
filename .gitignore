@@ -11,4 +11,5 @@ dist/
 .vscode
 .claude
 docs/superpowers
+.superpowers
 .worktrees/

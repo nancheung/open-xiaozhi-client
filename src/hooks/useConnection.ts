@@ -13,7 +13,6 @@ export function useConnection() {
 
   const handleDisconnect = useCallback(() => {
     disconnect()
-    useStore.getState().reset()
   }, [])
 
   const sendListen = useCallback((

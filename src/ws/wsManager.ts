@@ -128,13 +128,15 @@ export async function connect(): Promise<void> {
   }
 
   ws.onclose = (ev) => {
-    clearTimers()
-    finalizeInterruptedAssistantTurn()
+    ws = null
     const s = store().status
-    if (s !== 'error' && s !== 'idle') {
-      store().addLog('system', `连接关闭: ${ev.code} ${ev.reason || '正常关闭'}`)
-      store().reset()
-    }
+    const resetConnection = s !== 'error' && s !== 'idle'
+    teardown({
+      resetConnection,
+      logMessage: resetConnection
+        ? `连接关闭: ${ev.code} ${ev.reason || '正常关闭'}`
+        : undefined,
+    })
   }
 }
 
@@ -340,16 +342,30 @@ export function sendBinary(data: Uint8Array): void {
   }
 }
 
-export function disconnect(): void {
+interface TeardownOptions {
+  resetConnection: boolean
+  logMessage?: string
+}
+
+function teardown(opts: TeardownOptions): void {
   autoRestartListening = false
   clearTimers()
   finalizeInterruptedAssistantTurn()
+  store().resetAudio()
+  if (opts.resetConnection) {
+    if (opts.logMessage) store().addLog('system', opts.logMessage)
+    store().reset()
+  }
+}
+
+export function disconnect(): void {
   if (ws) {
     ws.onclose = null
     ws.onerror = null
     ws.close()
     ws = null
   }
+  teardown({ resetConnection: true })
 }
 
 function clearTimers(): void {

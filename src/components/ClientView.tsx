@@ -171,29 +171,29 @@ export function ClientView() {
     </div>
   )
 
-  const typingStrip = phase !== 'idle' && (
-    <div className="text-xs text-muted-foreground px-3 py-1.5 flex items-center gap-2 min-h-7">
-      {phase === 'recording' && (
-        <>
-          <span className="text-destructive"><MiniWaveform /></span>
-          <span className="text-foreground font-medium truncate">
-            {sttText || '正在听...'}
-          </span>
-        </>
+  const typingStrip = (isRecording || isTTSActive) && (
+    <div className="text-xs text-muted-foreground px-3 py-1 flex flex-col gap-0.5">
+      {isRecording && (
+        <span className="text-foreground font-medium truncate">
+          {sttText || '正在听...'}
+        </span>
       )}
-      {phase === 'speaking' && (
-        <>
-          <span className="text-primary"><MiniWaveform /></span>
-          <span className="text-foreground font-medium truncate">
-            {activationPayload ? activationMessage : (ttsText || `${emotionEmoji} 正在回复...`)}
-          </span>
-        </>
+      {isTTSActive && (
+        <span className="text-foreground/80 truncate inline-flex items-center gap-1">
+          <MiniWaveform className="text-primary shrink-0" />
+          {activationPayload ? activationMessage : (ttsText || `${emotionEmoji} 正在回复...`)}
+        </span>
       )}
     </div>
   )
 
   const bottomDock = (
     <div className="border-t bg-card px-3 py-2.5 shrink-0">
+      {isRecording && (
+        <div className="mb-1.5">
+          <VolumeBar analyser={recordingAnalyser} />
+        </div>
+      )}
       {typingStrip}
       <div className="flex items-center gap-2">
         {(isPlaying || isRecording) && listenMode !== 'realtime' ? (
@@ -242,9 +242,6 @@ export function ClientView() {
           {isRecording ? <Square className="h-5 w-5" fill="currentColor" /> : <Mic className="h-5 w-5" />}
         </button>
       </div>
-      <div className={`flex justify-center mt-2 ${isRecording ? 'visible' : 'invisible'}`}>
-        <VolumeBar analyser={recordingAnalyser} />
-      </div>
     </div>
   )
 
@@ -271,6 +268,11 @@ export function ClientView() {
           <p className="text-xs leading-snug text-center text-foreground/80 m-0 break-all">
             {sttText || '正在听...'}
           </p>
+          {isTTSActive && (
+            <p className="text-xs leading-snug text-center text-primary m-0 break-all">
+              {activationPayload ? activationMessage : (ttsText || '正在回复...')}
+            </p>
+          )}
         </>
       )}
       {phase === 'speaking' && (

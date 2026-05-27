@@ -47,19 +47,33 @@ export const createProtocolSlice: StateCreator<ProtocolState, [], [], ProtocolSt
       const mergeBinaryFrames: boolean = (get as any)().mergeBinaryFrames ?? true
 
       if (mergeBinaryFrames && s.log.length > 0) {
-        const last = s.log[s.log.length - 1]
-        if (last.direction === direction) {
-          const audioChunks = [...(last.audioChunks ?? []), chunk]
-          const frameCount = (last.frameCount ?? 0) + 1
-          const totalBytes = (last.totalBytes ?? 0) + chunk.byteLength
+        // 向后扫描找同方向最后一条记录，跨越异方向的 binary 条目合并
+        // 遇到非 binary 条目（in/out/system）时停止，表示新的会话轮次开始
+        let mergeIdx = -1
+        for (let i = s.log.length - 1; i >= 0; i--) {
+          const e = s.log[i]
+          if (e.direction === direction) {
+            mergeIdx = i
+            break
+          }
+          if (e.direction !== 'binary-in' && e.direction !== 'binary-out') {
+            break
+          }
+        }
+
+        if (mergeIdx >= 0) {
+          const target = s.log[mergeIdx]
+          const audioChunks = [...(target.audioChunks ?? []), chunk]
+          const frameCount = (target.frameCount ?? 0) + 1
+          const totalBytes = (target.totalBytes ?? 0) + chunk.byteLength
           const updated: LogEntry = {
-            ...last,
+            ...target,
             audioChunks,
             frameCount,
             totalBytes,
             data: `[${frameCount} frames, ${totalBytes} bytes]`,
           }
-          return { log: [...s.log.slice(0, -1), updated] }
+          return { log: [...s.log.slice(0, mergeIdx), updated, ...s.log.slice(mergeIdx + 1)] }
         }
       }
 

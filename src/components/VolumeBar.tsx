@@ -26,8 +26,10 @@ export function VolumeBar({ analyser }: Props) {
     function draw() {
       analyser!.getByteFrequencyData(dataArray)
 
-      const W = canvas!.width
-      const H = canvas!.height
+      const W = canvas!.clientWidth || 80
+      const H = canvas!.clientHeight || 24
+      if (canvas!.width !== W) canvas!.width = W
+      if (canvas!.height !== H) canvas!.height = H
       ctx!.clearRect(0, 0, W, H)
 
       const barW = (W - BAR_GAP * (BAR_COUNT - 1)) / BAR_COUNT
@@ -63,9 +65,7 @@ export function VolumeBar({ analyser }: Props) {
   return (
     <canvas
       ref={canvasRef}
-      width={80}
-      height={24}
-      className="rounded"
+      className="w-full h-6 rounded"
       aria-label="麦克风音量"
     />
   )

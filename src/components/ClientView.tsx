@@ -78,7 +78,7 @@ export function ClientView() {
   const setAudioStatus = useStore(s => s.setAudioStatus)
   const setAudioError = useStore(s => s.setAudioError)
   const { sendListen, sendAbort } = useConnection()
-  const { recordingAnalyserRef, playbackAnalyserRef, resumeAudioContext } = useAudio()
+  const { recordingAnalyser, playbackAnalyser, resumeAudioContext } = useAudio()
 
   const isReady = status === 'ready'
   const isRecording = audioStatus === 'recording'
@@ -243,7 +243,7 @@ export function ClientView() {
         </button>
       </div>
       <div className={`flex justify-center mt-2 ${isRecording ? 'visible' : 'invisible'}`}>
-        <VolumeBar analyser={recordingAnalyserRef.current} />
+        <VolumeBar analyser={recordingAnalyser} />
       </div>
     </div>
   )
@@ -266,7 +266,7 @@ export function ClientView() {
       {phase === 'recording' && (
         <>
           <div className="w-full">
-            <VolumeBar analyser={recordingAnalyserRef.current} />
+            <VolumeBar analyser={recordingAnalyser} />
           </div>
           <p className="text-xs leading-snug text-center text-foreground/80 m-0 break-all">
             {sttText || '正在听...'}
@@ -276,7 +276,7 @@ export function ClientView() {
       {phase === 'speaking' && (
         <>
           <div className="w-full">
-            <WaveformBars analyser={playbackAnalyserRef.current} />
+            <WaveformBars analyser={playbackAnalyser} />
           </div>
           <p className="text-xs leading-snug text-center text-foreground/80 m-0 break-all">
             {activationPayload ? activationMessage : (ttsText || '正在回复...')}

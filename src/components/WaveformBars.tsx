@@ -25,8 +25,10 @@ export function WaveformBars({ analyser }: Props) {
     function draw() {
       analyser!.getByteTimeDomainData(dataArray)
 
-      const W = canvas!.width
-      const H = canvas!.height
+      const W = canvas!.clientWidth || 200
+      const H = canvas!.clientHeight || 32
+      if (canvas!.width !== W) canvas!.width = W
+      if (canvas!.height !== H) canvas!.height = H
       ctx!.clearRect(0, 0, W, H)
 
       const barW = (W - BAR_GAP * (BAR_COUNT - 1)) / BAR_COUNT
@@ -59,9 +61,7 @@ export function WaveformBars({ analyser }: Props) {
   return (
     <canvas
       ref={canvasRef}
-      width={200}
-      height={32}
-      className="w-full rounded"
+      className="w-full h-8 rounded"
       aria-label="音频波形"
     />
   )

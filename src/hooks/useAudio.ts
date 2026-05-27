@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../store'
 import { encodeFloat32ToOpus, disposeEncoder } from '../features/audio/opusEncoder'
 import { decodeOpusToFloat32 } from '../features/audio/opusDecoder'
@@ -15,6 +15,8 @@ export function useAudio() {
   const mediaStreamRef = useRef<MediaStream | null>(null)
   const workletRef = useRef<AudioWorkletNode | null>(null)
   const recordingAnalyserRef = useRef<AnalyserNode | null>(null)
+  const [recordingAnalyser, setRecordingAnalyser] = useState<AnalyserNode | null>(null)
+  const [playbackAnalyser, setPlaybackAnalyser] = useState<AnalyserNode | null>(null)
 
   const nextPlayTimeRef = useRef(0)
 
@@ -36,6 +38,7 @@ export function useAudio() {
       playbackCtxRef.current = ctx
       playbackMasterGainRef.current = masterGain
       playbackAnalyserRef.current = analyser
+      setPlaybackAnalyser(analyser)
       registerGainNode(masterGain)
       nextPlayTimeRef.current = 0
 
@@ -111,6 +114,7 @@ export function useAudio() {
       source.connect(worklet)
       worklet.connect(ctx.destination)
       workletRef.current = worklet
+      setRecordingAnalyser(analyser)
     } catch (e) {
       const msg =
         e instanceof DOMException && e.name === 'NotAllowedError'
@@ -125,6 +129,7 @@ export function useAudio() {
     workletRef.current?.disconnect()
     workletRef.current = null
     recordingAnalyserRef.current = null
+    setRecordingAnalyser(null)
     mediaStreamRef.current?.getTracks().forEach(t => t.stop())
     mediaStreamRef.current = null
     void recordCtxRef.current?.close()
@@ -155,5 +160,5 @@ export function useAudio() {
     void playbackCtxRef.current?.resume()
   }
 
-  return { recordingAnalyserRef, playbackAnalyserRef, resumeAudioContext }
+  return { recordingAnalyserRef, recordingAnalyser, playbackAnalyserRef, playbackAnalyser, resumeAudioContext }
 }

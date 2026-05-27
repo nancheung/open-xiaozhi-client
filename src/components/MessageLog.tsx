@@ -7,7 +7,8 @@ import type { LogEntry, LogDirection } from '../features/protocol/protocolSlice'
 import { useAudioPlayback } from '../hooks/useAudioPlayback'
 
 function formatTime(ts: number): string {
-  return new Date(ts).toLocaleTimeString('zh-CN', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  const ms = String(ts % 1000).padStart(3, '0')
+  return new Date(ts).toLocaleTimeString('zh-CN', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }) + '.' + ms
 }
 
 const DIR_LABEL: Record<LogDirection, string> = {
@@ -34,18 +35,20 @@ function LogRow({ entry, onPlay, playingId }: {
 
   return (
     <div className="flex gap-2 py-0.5 border-b border-border/20 text-[11px] font-mono hover:bg-muted/20 items-center">
-      <span className="text-muted-foreground/60 w-[72px] shrink-0 tabular-nums">{formatTime(timestamp)}</span>
-      <span className={`w-14 shrink-0 font-semibold ${DIR_CLASS[direction]}`}>{DIR_LABEL[direction]}</span>
+      <span className="text-muted-foreground/60 w-[96px] shrink-0 tabular-nums">{formatTime(timestamp)}</span>
+      <span className={`flex items-center gap-0.5 shrink-0 font-semibold ${DIR_CLASS[direction]}`}>
+        {DIR_LABEL[direction]}
+        {canPlay && onPlay && (
+          <button
+            className={`p-0.5 rounded transition-colors ${isPlaying ? 'text-amber-500 hover:text-amber-600' : 'hover:text-foreground'}`}
+            onClick={() => onPlay(entry)}
+            title={isPlaying ? '停止' : '播放音频'}
+          >
+            {isPlaying ? <Square size={10} /> : <Play size={10} />}
+          </button>
+        )}
+      </span>
       <span className="break-all text-foreground/80 min-w-0 flex-1">{text}</span>
-      {canPlay && onPlay && (
-        <button
-          className={`shrink-0 ml-1 p-0.5 rounded transition-colors ${isPlaying ? 'text-amber-500 hover:text-amber-600' : 'text-muted-foreground/50 hover:text-foreground'}`}
-          onClick={() => onPlay(entry)}
-          title={isPlaying ? '停止' : '播放音频'}
-        >
-          {isPlaying ? <Square size={10} /> : <Play size={10} />}
-        </button>
-      )}
     </div>
   )
 }

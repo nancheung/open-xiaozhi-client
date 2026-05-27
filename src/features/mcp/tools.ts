@@ -1,4 +1,7 @@
-import { getAppVolume, setAppVolume } from './audioControl'
+import {
+  applyVolume, applyBrightness, applyTheme,
+  getCurrentVolume, getCurrentBrightness, getCurrentTheme,
+} from '../device/deviceSetters'
 
 export interface ToolDefinition {
   name: string
@@ -35,7 +38,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     description: '设置屏幕亮度',
     inputSchema: {
       type: 'object',
-      properties: { brightness: { type: 'integer', description: '亮度值，范围 0-100', minimum: 0, maximum: 100 } },
+      properties: { brightness: { type: 'integer', description: '亮度值，范围 30-100（最低 30，防止页面不可见）', minimum: 30, maximum: 100 } },
       required: ['brightness'],
     },
   },
@@ -69,28 +72,6 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   },
 ]
 
-function getBrightness(): number {
-  const filter = document.documentElement.style.filter
-  const match = filter.match(/brightness\(([\d.]+)%?\)/)
-  return match ? Math.round(parseFloat(match[1])) : 100
-}
-
-function setBrightness(brightness: number): void {
-  document.documentElement.style.filter = brightness < 100 ? `brightness(${brightness}%)` : ''
-}
-
-function getTheme(): 'light' | 'dark' {
-  return document.documentElement.classList.contains('dark') ? 'dark' : 'light'
-}
-
-function setTheme(theme: 'light' | 'dark'): void {
-  if (theme === 'dark') {
-    document.documentElement.classList.add('dark')
-  } else {
-    document.documentElement.classList.remove('dark')
-  }
-}
-
 type BatteryManager = { level: number; charging: boolean }
 type NavigatorWithBattery = Navigator & { getBattery?(): Promise<BatteryManager> }
 
@@ -114,8 +95,8 @@ export async function handleToolCall(
         content: [{
           type: 'text',
           text: JSON.stringify({
-            volume: getAppVolume(),
-            screen: { brightness: getBrightness(), theme: getTheme() },
+            volume: getCurrentVolume(),
+            screen: { brightness: getCurrentBrightness(), theme: getCurrentTheme() },
             ...(battery !== undefined ? { battery } : {}),
             network: { connected: navigator.onLine },
           }),
@@ -124,17 +105,17 @@ export async function handleToolCall(
     }
 
     case 'self.audio_speaker.set_volume': {
-      setAppVolume(args.volume as number)
+      applyVolume(args.volume as number)
       return { isError: false, content: [{ type: 'text', text: 'true' }] }
     }
 
     case 'self.screen.set_brightness': {
-      setBrightness(args.brightness as number)
+      applyBrightness(args.brightness as number)
       return { isError: false, content: [{ type: 'text', text: 'true' }] }
     }
 
     case 'self.screen.set_theme': {
-      setTheme(args.theme as 'light' | 'dark')
+      applyTheme(args.theme as 'light' | 'dark')
       return { isError: false, content: [{ type: 'text', text: 'true' }] }
     }
 

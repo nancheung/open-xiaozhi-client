@@ -3,7 +3,7 @@ import { ConnectionHeader } from './components/ConnectionHeader'
 import { ClientView } from './components/ClientView'
 import { MessageLog } from './components/MessageLog'
 import { ProtocolControls } from './components/ProtocolControls'
-import { IotPanel } from './components/IotPanel'
+import { DeviceSettingsPanel } from './components/DeviceSettingsPanel'
 import { HttpPanel } from './components/HttpPanel'
 import { SettingsPanel } from './components/SettingsPanel'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs'
@@ -26,7 +26,7 @@ export default function App() {
             <div className="px-4 pt-2 border-b shrink-0">
               <TabsList className="h-8">
                 <TabsTrigger value="log" className="text-xs h-7">协议日志</TabsTrigger>
-                <TabsTrigger value="iot" className="text-xs h-7">IoT</TabsTrigger>
+                <TabsTrigger value="iot" className="text-xs h-7">设备</TabsTrigger>
                 <TabsTrigger value="http" className="text-xs h-7">HTTP</TabsTrigger>
                 <TabsTrigger value="settings" className="text-xs h-7">设置</TabsTrigger>
               </TabsList>
@@ -36,7 +36,7 @@ export default function App() {
               <ProtocolControls />
             </TabsContent>
             <TabsContent value="iot" className="flex-1 overflow-auto mt-0 border-0">
-              <IotPanel />
+              <DeviceSettingsPanel />
             </TabsContent>
             <TabsContent value="http" className="flex-1 overflow-auto mt-0 border-0">
               <HttpPanel />

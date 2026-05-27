@@ -337,7 +337,7 @@ export function ClientView() {
       <button
         onClick={handleCycleMode}
         disabled={isRecording}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-card hover:border-border/80 text-[11px] transition-colors disabled:opacity-50"
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-card hover:bg-muted hover:border-border text-[11px] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         title="点击切换模式"
       >
         <ModeIcon className="h-3 w-3 text-muted-foreground" />

@@ -35,9 +35,9 @@ const WIDE_BREAKPOINT = 700
 // ─── Listen-mode metadata: the three modes mapped to concrete chat metaphors ───
 type ModeInfo = { label: string; desc: string; Icon: typeof Radio }
 const MODES: Record<ListenMode, ModeInfo> = {
-  manual:   { label: '对讲机',   desc: '按一下说一句，像微信语音消息', Icon: Radio },
-  auto:     { label: '智能助理', desc: '点一下说，自动识别停顿',       Icon: Sparkles },
-  realtime: { label: '通话',     desc: '全双工通话，可随时打断',       Icon: Phone },
+  manual:   { label: '对讲机',   desc: '手动，自己选择什么时候说', Icon: Radio },
+  auto:     { label: '智能助理', desc: '自动，自动识别开始结束',       Icon: Sparkles },
+  realtime: { label: '通话',     desc: '实时，通话模式',       Icon: Phone },
 }
 const cycleMode = (m: ListenMode): ListenMode =>
   m === 'auto' ? 'manual' : m === 'manual' ? 'realtime' : 'auto'
@@ -107,7 +107,11 @@ export function ClientView() {
   function handleMicClick() {
     if (!isReady && !isRecording) return
     if (isRecording) {
-      sendListen('stop')
+      if (listenMode === 'realtime') {
+        sendAbort()
+      } else {
+        sendListen('stop')
+      }
       setAudioStatus('idle')
     } else {
       if (isTTSActive) sendAbort()
@@ -231,7 +235,7 @@ export function ClientView() {
           <VolumeBar analyser={recordingAnalyserRef.current} />
         </div>
       )}
-      {(isReady || isRecording) && (
+      {(isReady || isRecording) && listenMode !== 'realtime' && (
         <div className="flex justify-center mt-1">
           <Button
             variant="ghost"
@@ -345,7 +349,7 @@ export function ClientView() {
         <span className="text-muted-foreground/70 truncate max-w-[140px]">· {mode.desc}</span>
       </button>
 
-      {(isReady || isRecording) && (
+      {(isReady || isRecording) && listenMode !== 'realtime' && (
         <Button
           variant="ghost"
           size="sm"

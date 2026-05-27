@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Panel, Group, Separator } from 'react-resizable-panels'
 import { ConnectionHeader } from './components/ConnectionHeader'
 import { ClientView } from './components/ClientView'
@@ -7,21 +8,39 @@ import { DeviceSettingsPanel } from './components/DeviceSettingsPanel'
 import { HttpPanel } from './components/HttpPanel'
 import { SettingsPanel } from './components/SettingsPanel'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs'
+import { STORAGE_KEYS, getStorageJSON, setStorageJSON } from './lib/persistence'
+import { applyBrightness, applyTheme } from './features/device/deviceSetters'
+import { useStore } from './store'
 
 export default function App() {
+  const [savedLayout] = useState(
+    () => getStorageJSON<Record<string, number>>(STORAGE_KEYS.PANEL_LAYOUT) ?? undefined
+  )
+
+  useEffect(() => {
+    const { brightness, theme } = useStore.getState()
+    applyBrightness(brightness)
+    applyTheme(theme)
+  }, [])
+
   return (
     <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden">
       <ConnectionHeader />
-      <Group orientation="horizontal" className="flex-1 overflow-hidden">
+      <Group
+        orientation="horizontal"
+        className="flex-1 overflow-hidden"
+        defaultLayout={savedLayout}
+        onLayoutChanged={(layout) => setStorageJSON(STORAGE_KEYS.PANEL_LAYOUT, layout)}
+      >
         {/* 左栏：客户端模拟 */}
-        <Panel defaultSize="42%" minSize="20%" maxSize="70%" className="flex flex-col overflow-hidden">
+        <Panel id="left" defaultSize="42%" minSize="20%" maxSize="70%" className="flex flex-col overflow-hidden">
           <ClientView />
         </Panel>
 
         <Separator className="w-1.5 bg-border hover:bg-primary/60 transition-colors cursor-col-resize" />
 
         {/* 右栏：调试面板 */}
-        <Panel minSize="30%" className="flex flex-col overflow-hidden">
+        <Panel id="right" minSize="30%" className="flex flex-col overflow-hidden">
           <Tabs defaultValue="log" className="flex flex-col flex-1 overflow-hidden">
             <div className="px-4 pt-2 border-b shrink-0">
               <TabsList className="h-8">

@@ -3,6 +3,8 @@ export const STORAGE_KEYS = {
   OTA_URL: 'xiaozhi_ota_url',
   DEVICE_ID: 'xiaozhi_device_id',
   CLIENT_ID: 'xiaozhi_client_id',
+  DEVICE_SETTINGS: 'xiaozhi_device_settings',
+  PANEL_LAYOUT: 'xiaozhi_panel_layout',
 } as const
 
 export function getStorageString(key: string): string | null {

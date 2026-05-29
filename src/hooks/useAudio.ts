@@ -14,6 +14,10 @@ export function useAudio() {
   const recordCtxRef = useRef<AudioContext | null>(null)
   const mediaStreamRef = useRef<MediaStream | null>(null)
   const workletRef = useRef<AudioWorkletNode | null>(null)
+  // 录音会话代号：每次 startRecording 领取一个号，stopRecording 递增使其失效。
+  // 用于取消仍在 await（getUserMedia / addModule）中的启动流程，
+  // 避免连接关闭后 in-flight 的 startRecording 把麦克风重新接好。
+  const recordingSessionRef = useRef(0)
   const recordingAnalyserRef = useRef<AnalyserNode | null>(null)
   const [recordingAnalyser, setRecordingAnalyser] = useState<AnalyserNode | null>(null)
   const [playbackAnalyser, setPlaybackAnalyser] = useState<AnalyserNode | null>(null)
@@ -79,10 +83,17 @@ export function useAudio() {
   }, [downstreamSampleRate])
 
   async function startRecording() {
+    const session = ++recordingSessionRef.current
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { sampleRate: uploadSampleRate, channelCount: 1, echoCancellation: true },
       })
+      // 录音已被取消（如连接关闭 / 用户停止）：释放刚获取的麦克风轨道后退出，
+      // 此时尚未创建 AudioContext，无需其它清理。
+      if (session !== recordingSessionRef.current) {
+        stream.getTracks().forEach(t => t.stop())
+        return
+      }
       mediaStreamRef.current = stream
 
       const ctx = new AudioContext({ sampleRate: uploadSampleRate })
@@ -92,6 +103,16 @@ export function useAudio() {
       const processorUrl = createRecordingProcessorUrl()
       await ctx.audioWorklet.addModule(processorUrl)
       URL.revokeObjectURL(processorUrl)
+
+      // 录音在 addModule 期间被取消：清理本次创建的资源，绝不接线 worklet
+      // （否则 port.onmessage 会持续触发 sendBinary / ↑ BIN）。
+      if (session !== recordingSessionRef.current) {
+        stream.getTracks().forEach(t => t.stop())
+        void ctx.close()
+        mediaStreamRef.current = null
+        recordCtxRef.current = null
+        return
+      }
 
       const source = ctx.createMediaStreamSource(stream)
 
@@ -126,6 +147,8 @@ export function useAudio() {
   }
 
   function stopRecording() {
+    // 使任何仍在 await 中的 startRecording 失效（见 recordingSessionRef 说明）
+    recordingSessionRef.current++
     workletRef.current?.disconnect()
     workletRef.current = null
     recordingAnalyserRef.current = null

@@ -5,6 +5,8 @@ import {
 import { useStore } from '@/store'
 import { startCamera, captureJpeg } from '../camera/cameraCapture'
 
+const PHOTO_PREVIEW_MS = 2000
+
 export interface ToolDefinition {
   name: string
   description: string
@@ -158,15 +160,31 @@ export async function handleToolCall(
     }
 
     case 'self.camera.take_photo': {
-      const { visionUrl, visionToken, deviceId, config } = useStore.getState()
+      const { visionUrl, visionToken, deviceId, config, cameraEnabled, cameraActive } = useStore.getState()
       if (!visionUrl) {
         return { isError: true, content: [{ type: 'text', text: '服务端未提供视觉分析端点' }] }
       }
+      // 摄像头开关关闭：直接返回，不拍照
+      if (!cameraEnabled) {
+        return { isError: true, content: [{ type: 'text', text: '摄像头已关闭，无法拍照' }] }
+      }
       const question = (args.question as string) ?? ''
       try {
-        // 摄像头未开启时尝试自动开启再抓拍（参考 ESP32 Capture()）
-        await startCamera()
+        // 开关为开但流未在跑（如加载时序/权限刚授予）：尝试一次启动兜底
+        if (!cameraActive) {
+          await startCamera()
+        }
         const blob = await captureJpeg()
+
+        // 把发送给服务端的照片在 UI 上短暂展示（约 2 秒）
+        const photoUrl = URL.createObjectURL(blob)
+        useStore.getState().setCapturedPhoto(photoUrl)
+        setTimeout(() => {
+          if (useStore.getState().capturedPhotoUrl === photoUrl) {
+            useStore.getState().setCapturedPhoto(null)
+          }
+          URL.revokeObjectURL(photoUrl)
+        }, PHOTO_PREVIEW_MS)
 
         const fd = new FormData()
         fd.append('question', question)

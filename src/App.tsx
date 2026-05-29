@@ -11,6 +11,7 @@ import { SettingsPanel } from './components/SettingsPanel'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs'
 import { STORAGE_KEYS, getStorageJSON, setStorageJSON } from './lib/persistence'
 import { applyBrightness, applyTheme } from './features/device/deviceSetters'
+import { autoStartIfGranted } from './features/camera/cameraCapture'
 import { useStore } from './store'
 
 export default function App() {
@@ -22,6 +23,8 @@ export default function App() {
     const { brightness, theme } = useStore.getState()
     applyBrightness(brightness)
     applyTheme(theme)
+    // 若摄像头开关持久化为"开"，仅在浏览器已授权时自动恢复预览（不弹权限框）
+    void autoStartIfGranted()
   }, [])
 
   return (

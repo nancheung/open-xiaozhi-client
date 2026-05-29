@@ -6,7 +6,6 @@ import {
 } from '../features/protocol/types'
 import { initDecoder } from '../features/audio/opusDecoder'
 import { TOOL_DEFINITIONS, handleToolCall } from '../features/mcp/tools'
-import { stopCamera } from '../features/camera/cameraCapture'
 import { useStore } from '../store'
 
 let ws: WebSocket | null = null
@@ -363,8 +362,8 @@ function teardown(opts: TeardownOptions): void {
   clearTimers()
   finalizeInterruptedAssistantTurn()
   store().resetAudio()
+  // vision 端点是连接级的，断开时清除；摄像头开关是独立的持久设备设置，不在此重置
   store().clearVisionEndpoint()
-  stopCamera()
   if (opts.resetConnection) {
     if (opts.logMessage) store().addLog('system', opts.logMessage)
     store().reset()

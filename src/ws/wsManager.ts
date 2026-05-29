@@ -6,6 +6,7 @@ import {
 } from '../features/protocol/types'
 import { initDecoder } from '../features/audio/opusDecoder'
 import { TOOL_DEFINITIONS, handleToolCall } from '../features/mcp/tools'
+import { stopCamera } from '../features/camera/cameraCapture'
 import { useStore } from '../store'
 
 let ws: WebSocket | null = null
@@ -276,6 +277,16 @@ function handleMcp(msg: MCPMessage): void {
 
   // initialize request from server (server is MCP initiator)
   if (payload.method === 'initialize') {
+    // 解析服务端下发的视觉能力端点（参考 ESP32 ParseCapabilities）
+    const params = payload.params as
+      { capabilities?: { vision?: { url?: unknown; token?: unknown } } } | undefined
+    const vision = params?.capabilities?.vision
+    if (vision && typeof vision.url === 'string') {
+      const token = typeof vision.token === 'string' ? vision.token : null
+      store().setVisionEndpoint(vision.url, token)
+      store().addLog('system', `视觉端点已配置: ${vision.url}`)
+    }
+
     const resp = buildMCPResponse(sid, {
       jsonrpc: '2.0',
       id: payload.id,
@@ -352,6 +363,8 @@ function teardown(opts: TeardownOptions): void {
   clearTimers()
   finalizeInterruptedAssistantTurn()
   store().resetAudio()
+  store().clearVisionEndpoint()
+  stopCamera()
   if (opts.resetConnection) {
     if (opts.logMessage) store().addLog('system', opts.logMessage)
     store().reset()

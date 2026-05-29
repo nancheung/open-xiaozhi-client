@@ -411,3 +411,78 @@ describe('wsManager tts/llm flows', () => {
     expect(messages[2].text).toBe('正在为您播放 《中秋月》')
   })
 })
+
+// ---------- MCP initialize: vision capability parsing ----------
+
+describe('wsManager MCP vision capability', () => {
+  let fetchMock: ReturnType<typeof vi.fn>
+
+  beforeEach(() => {
+    fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    useStore.setState({
+      status: 'idle',
+      errorMessage: null,
+      sessionId: null,
+      wsUrl: null,
+      token: null,
+      deviceId: 'AA:BB:CC:DD:EE:FF',
+      config: { otaUrl: 'http://localhost:8003', clientId: 'test-client-id' },
+    })
+    useStore.getState().clearVisionEndpoint()
+    MockWebSocket.instances = []
+  })
+
+  afterEach(() => {
+    disconnect()
+    vi.clearAllMocks()
+    MockWebSocket.instances = []
+  })
+
+  it('initialize 携带 capabilities.vision 时应写入 store 的 visionUrl/visionToken', async () => {
+    fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ websocket: { url: 'ws://localhost:8080', token: 'token' } }) })
+
+    await connect()
+    await new Promise(r => setTimeout(r, 10))
+
+    const socket = (global.WebSocket as any).last as MockWebSocket
+    socket.receive(JSON.stringify({ type: 'hello', version: 1, transport: 'websocket', session_id: 's1', audio_params: { format: 'opus', sample_rate: 16000, channels: 1, frame_duration: 20 } }))
+
+    socket.receive(JSON.stringify({
+      type: 'mcp',
+      session_id: 's1',
+      payload: {
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'initialize',
+        params: {
+          capabilities: {
+            vision: { url: 'http://host:8003/mcp/vision/explain', token: 'eyJ-abc' },
+          },
+        },
+      },
+    }))
+
+    const state = useStore.getState()
+    expect(state.visionUrl).toBe('http://host:8003/mcp/vision/explain')
+    expect(state.visionToken).toBe('eyJ-abc')
+  })
+
+  it('initialize 不含 vision 时不应设置端点', async () => {
+    fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ websocket: { url: 'ws://localhost:8080', token: 'token' } }) })
+
+    await connect()
+    await new Promise(r => setTimeout(r, 10))
+
+    const socket = (global.WebSocket as any).last as MockWebSocket
+    socket.receive(JSON.stringify({ type: 'hello', version: 1, transport: 'websocket', session_id: 's1', audio_params: { format: 'opus', sample_rate: 16000, channels: 1, frame_duration: 20 } }))
+
+    socket.receive(JSON.stringify({
+      type: 'mcp',
+      session_id: 's1',
+      payload: { jsonrpc: '2.0', id: 1, method: 'initialize', params: { capabilities: {} } },
+    }))
+
+    expect(useStore.getState().visionUrl).toBe(null)
+  })
+})

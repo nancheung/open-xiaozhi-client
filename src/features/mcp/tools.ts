@@ -2,6 +2,8 @@ import {
   applyVolume, applyBrightness, applyTheme,
   getCurrentVolume, getCurrentBrightness, getCurrentTheme,
 } from '../device/deviceSetters'
+import { useStore } from '@/store'
+import { startCamera, captureJpeg } from '../camera/cameraCapture'
 
 export interface ToolDefinition {
   name: string
@@ -68,6 +70,15 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       type: 'object',
       properties: { url: { type: 'string', description: '固件下载地址' } },
       required: ['url'],
+    },
+  },
+  {
+    name: 'self.camera.take_photo',
+    description: '请记住你有一个摄像头。当用户让你看某样东西时，使用此工具拍照并解释。\n参数 `question`：你想就这张照片提出的问题。\n返回：包含照片解析信息的文本。',
+    inputSchema: {
+      type: 'object',
+      properties: { question: { type: 'string', description: '你想就这张照片提出的问题' } },
+      required: ['question'],
     },
   },
 ]
@@ -144,6 +155,40 @@ export async function handleToolCall(
       const url = args.url as string
       window.open(url, '_blank', 'noopener,noreferrer')
       return { isError: false, content: [{ type: 'text', text: `已在新窗口打开: ${url}` }] }
+    }
+
+    case 'self.camera.take_photo': {
+      const { visionUrl, visionToken, deviceId, config } = useStore.getState()
+      if (!visionUrl) {
+        return { isError: true, content: [{ type: 'text', text: '服务端未提供视觉分析端点' }] }
+      }
+      const question = (args.question as string) ?? ''
+      try {
+        // 摄像头未开启时尝试自动开启再抓拍（参考 ESP32 Capture()）
+        await startCamera()
+        const blob = await captureJpeg()
+
+        const fd = new FormData()
+        fd.append('question', question)
+        fd.append('file', blob, 'camera.jpg')
+
+        // 不手动设置 Content-Type，由浏览器自动带 multipart boundary
+        const headers: Record<string, string> = { 'Device-Id': deviceId }
+        if (config.clientId) headers['Client-Id'] = config.clientId
+        if (visionToken) headers['Authorization'] = `Bearer ${visionToken}`
+
+        const res = await fetch(visionUrl, { method: 'POST', headers, body: fd })
+        if (!res.ok) {
+          return { isError: true, content: [{ type: 'text', text: `视觉接口请求失败: HTTP ${res.status}` }] }
+        }
+        const data = await res.json() as { success?: boolean; response?: string; message?: string }
+        if (data.success) {
+          return { isError: false, content: [{ type: 'text', text: data.response ?? '' }] }
+        }
+        return { isError: true, content: [{ type: 'text', text: data.message ?? '视觉分析失败' }] }
+      } catch (e) {
+        return { isError: true, content: [{ type: 'text', text: `拍照失败: ${(e as Error).message}` }] }
+      }
     }
 
     default:

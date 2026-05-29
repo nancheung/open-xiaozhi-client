@@ -5,6 +5,7 @@ import { ClientView } from './components/ClientView'
 import { MessageLog } from './components/MessageLog'
 import { ProtocolControls } from './components/ProtocolControls'
 import { DeviceSettingsPanel } from './components/DeviceSettingsPanel'
+import { CameraPanel } from './components/CameraPanel'
 import { HttpPanel } from './components/HttpPanel'
 import { SettingsPanel } from './components/SettingsPanel'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs'
@@ -55,6 +56,7 @@ export default function App() {
               <ProtocolControls />
             </TabsContent>
             <TabsContent value="iot" className="flex-1 overflow-auto mt-0 border-0">
+              <CameraPanel />
               <DeviceSettingsPanel />
             </TabsContent>
             <TabsContent value="http" className="flex-1 overflow-auto mt-0 border-0">

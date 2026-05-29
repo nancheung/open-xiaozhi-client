@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { handleToolCall, TOOL_DEFINITIONS } from '../tools'
+import { useStore } from '@/store'
+import * as cameraCapture from '../../camera/cameraCapture'
 
 beforeEach(() => {
   document.documentElement.className = 'dark'
@@ -7,8 +9,8 @@ beforeEach(() => {
 })
 
 describe('MCP 工具处理器', () => {
-  it('TOOL_DEFINITIONS 包含 7 个工具', () => {
-    expect(TOOL_DEFINITIONS).toHaveLength(7)
+  it('TOOL_DEFINITIONS 包含 8 个工具', () => {
+    expect(TOOL_DEFINITIONS).toHaveLength(8)
     const names = TOOL_DEFINITIONS.map(t => t.name)
     expect(names).toContain('self.get_device_status')
     expect(names).toContain('self.audio_speaker.set_volume')
@@ -17,6 +19,7 @@ describe('MCP 工具处理器', () => {
     expect(names).toContain('self.get_system_info')
     expect(names).toContain('self.reboot')
     expect(names).toContain('self.upgrade_firmware')
+    expect(names).toContain('self.camera.take_photo')
   })
 
   it('get_device_status 返回含 volume/screen/network 的 JSON', async () => {
@@ -87,5 +90,64 @@ describe('MCP 工具处理器', () => {
   it('未知工具返回错误', async () => {
     const r = await handleToolCall('unknown.tool', {})
     expect(r.isError).toBe(true)
+  })
+})
+
+describe('self.camera.take_photo', () => {
+  beforeEach(() => {
+    useStore.getState().clearVisionEndpoint()
+    vi.restoreAllMocks()
+  })
+
+  it('缺少视觉端点时返回错误', async () => {
+    const r = await handleToolCall('self.camera.take_photo', { question: '这是什么' })
+    expect(r.isError).toBe(true)
+    expect(r.content[0].text).toContain('视觉')
+  })
+
+  it('成功路径返回视觉分析的 response 文本', async () => {
+    useStore.getState().setVisionEndpoint('http://host/mcp/vision/explain', 'tok')
+    vi.spyOn(cameraCapture, 'startCamera').mockResolvedValue()
+    const blob = new Blob(['jpegdata'], { type: 'image/jpeg' })
+    vi.spyOn(cameraCapture, 'captureJpeg').mockResolvedValue(blob)
+
+    let captured: { url: string; init: RequestInit } | null = null
+    const fetchMock = vi.fn(async (url: string, init: RequestInit) => {
+      captured = { url, init }
+      return {
+        ok: true,
+        json: async () => ({ success: true, response: '图片中是一只猫' }),
+      } as Response
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const r = await handleToolCall('self.camera.take_photo', { question: '这是什么' })
+    expect(r.isError).toBe(false)
+    expect(r.content[0].text).toBe('图片中是一只猫')
+
+    // 校验请求：POST、Authorization、FormData 含 question 与 file
+    expect(captured!.url).toBe('http://host/mcp/vision/explain')
+    expect(captured!.init.method).toBe('POST')
+    const headers = captured!.init.headers as Record<string, string>
+    expect(headers['Authorization']).toBe('Bearer tok')
+    const fd = captured!.init.body as FormData
+    expect(fd.get('question')).toBe('这是什么')
+    expect(fd.get('file')).toBeInstanceOf(Blob)
+    vi.unstubAllGlobals()
+  })
+
+  it('视觉接口业务失败时返回错误信息', async () => {
+    useStore.getState().setVisionEndpoint('http://host/mcp/vision/explain', null)
+    vi.spyOn(cameraCapture, 'startCamera').mockResolvedValue()
+    vi.spyOn(cameraCapture, 'captureJpeg').mockResolvedValue(new Blob(['x'], { type: 'image/jpeg' }))
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ success: false, message: '您还未设置默认的视觉分析模块' }),
+    } as Response)))
+
+    const r = await handleToolCall('self.camera.take_photo', { question: '看看' })
+    expect(r.isError).toBe(true)
+    expect(r.content[0].text).toBe('您还未设置默认的视觉分析模块')
+    vi.unstubAllGlobals()
   })
 })

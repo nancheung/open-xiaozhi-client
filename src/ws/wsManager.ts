@@ -5,6 +5,8 @@ import {
   type MCPMessage,
 } from '../features/protocol/types'
 import { initDecoder } from '../features/audio/opusDecoder'
+import { buildOtaHeaders, buildSystemInfoBody } from '../features/connection/systemInfo'
+import { runActivation } from '../features/activation/activate'
 import { TOOL_DEFINITIONS, handleToolCall } from '../features/mcp/tools'
 import { useStore } from '../store'
 
@@ -34,20 +36,16 @@ export async function connect(): Promise<void> {
   store().setStatus('ota_fetching')
   store().addLog('system', `OTA 请求: ${config.otaUrl}`)
 
-  let data: { websocket?: { url: string; token: string }; activation?: { message: string; [key: string]: unknown } }
+  // 对齐 xiaozhi-esp32：请求头与系统信息体由 features/connection/systemInfo.ts 构造
+  const otaHeaders = buildOtaHeaders(deviceId, config.clientId)
+  const otaBody = JSON.stringify(buildSystemInfoBody(deviceId, config.clientId))
+
+  let data: {
+    websocket?: { url: string; token: string }
+    activation?: { message: string; challenge?: string; timeout_ms?: number; [key: string]: unknown }
+  }
   try {
-    const res = await fetch(config.otaUrl, {
-      method: 'POST',
-      headers: {
-        'Device-Id': deviceId,
-        'Client-Id': config.clientId,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        application: { version: __APP_VERSION__ },
-        board: { type: 'open-xiaozhi-client' },
-      }),
-    })
+    const res = await fetch(config.otaUrl, { method: 'POST', headers: otaHeaders, body: otaBody })
     if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`)
     data = await res.json()
   } catch (e) {
@@ -55,11 +53,39 @@ export async function connect(): Promise<void> {
     return
   }
 
-  // Check for activation requirement
+  // 激活流程（对齐 xiaozhi-esp32 ota.cc Activate）
   if (data.activation) {
     store().setActivation(data.activation)
     store().setStatus('activation_required')
-    return
+
+    // 携带 challenge → 走 /activate 轮询；否则保持「仅展示」行为
+    if (typeof data.activation.challenge === 'string' && data.activation.challenge) {
+      store().addLog('system', '设备激活中，正在轮询 /activate ...')
+      const ok = await runActivation(config.otaUrl, otaHeaders, {
+        timeoutMs: typeof data.activation.timeout_ms === 'number' ? data.activation.timeout_ms : undefined,
+        signal: () => { const s = store().status; return s === 'idle' || s === 'error' },
+      })
+      if (!ok) {
+        store().setError('设备激活失败')
+        return
+      }
+      store().addLog('system', '设备激活成功')
+      store().clearActivation()
+
+      // 激活成功后若本次响应未带 websocket，则重新拉取 OTA 获取连接配置
+      if (!data.websocket) {
+        try {
+          const res2 = await fetch(config.otaUrl, { method: 'POST', headers: otaHeaders, body: otaBody })
+          if (!res2.ok) throw new Error(`HTTP ${res2.status} ${res2.statusText}`)
+          data = await res2.json()
+        } catch (e) {
+          store().setError(`OTA 失败: ${(e as Error).message}`)
+          return
+        }
+      }
+    } else {
+      return
+    }
   }
 
   // Clear any previous activation prompt

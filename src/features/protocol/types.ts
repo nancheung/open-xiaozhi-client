@@ -93,8 +93,10 @@ export const buildListen = (
   opts?: { mode?: 'auto' | 'manual' | 'realtime'; text?: string }
 ) => ({ type: 'listen' as const, session_id, state, ...opts })
 
-export const buildAbort = (session_id: string) =>
-  ({ type: 'abort' as const, session_id })
+// 对齐 xiaozhi-esp32（protocol.cc SendAbortSpeaking）：
+// 仅唤醒词打断时携带 reason="wake_word_detected"，手动打断不带 reason。
+export const buildAbort = (session_id: string, reason?: 'wake_word_detected') =>
+  ({ type: 'abort' as const, session_id, ...(reason ? { reason } : {}) })
 
 export const buildPing = (session_id: string) =>
   ({ type: 'ping' as const, session_id })

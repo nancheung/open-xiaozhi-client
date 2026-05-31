@@ -9,10 +9,12 @@ import { createDeviceIdentitySlice, type DeviceIdentityState } from '../features
 import { createDeviceSettingsSlice, type DeviceSettingsState } from '../features/device/deviceSettingsSlice'
 import { createActivationSlice, type ActivationState } from '../features/activation/activationSlice'
 import { createConversationSlice, type ConversationState } from '../features/conversation/conversationSlice'
+import { createCameraSlice, type CameraState } from '../features/camera/cameraSlice'
 
 export type AppState =
   ConnectionState & SettingsState & ProtocolState & McpState & AudioState &
-  IotState & DeviceIdentityState & DeviceSettingsState & ActivationState & ConversationState
+  IotState & DeviceIdentityState & DeviceSettingsState & ActivationState & ConversationState &
+  CameraState
 
 export const useStore = create<AppState>()((...args) => ({
   ...createConnectionSlice(...args),
@@ -25,4 +27,5 @@ export const useStore = create<AppState>()((...args) => ({
   ...createDeviceSettingsSlice(...args),
   ...createActivationSlice(...args),
   ...createConversationSlice(...args),
+  ...createCameraSlice(...args),
 }))

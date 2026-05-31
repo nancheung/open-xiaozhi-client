@@ -410,4 +410,118 @@ describe('wsManager tts/llm flows', () => {
     expect(messages[2].role).toBe('assistant')
     expect(messages[2].text).toBe('正在为您播放 《中秋月》')
   })
+
+  it('tool stt mid-turn (assistant already spoke) must still show the post-tool reply', async () => {
+    fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ websocket: { url: 'ws://localhost:8080', token: 'token' } }) })
+
+    await connect()
+    await new Promise(r => setTimeout(r, 10))
+
+    const socket = (global.WebSocket as any).last as MockWebSocket
+    expect(socket).toBeDefined()
+
+    socket.receive(JSON.stringify({ type: 'hello', version: 1, transport: 'websocket', session_id: 's1', audio_params: { format: 'opus', sample_rate: 16000, channels: 1, frame_duration: 20 } }))
+    // 真实日志顺序：用户说话 → 一个 tts.start → 助手先说几句 → 工具 STT + 工具调用 → 助手继续说 → tts.stop
+    socket.receive(JSON.stringify({ type: 'stt', text: '不是你直接拍照看一下', session_id: 's1' }))
+    socket.receive(JSON.stringify({ type: 'tts', state: 'start', session_id: 's1' }))
+    socket.receive(JSON.stringify({ type: 'llm', text: '🙂', emotion: 'happy', session_id: 's1' }))
+    socket.receive(JSON.stringify({ type: 'tts', state: 'sentence_start', text: '哦', session_id: 's1' }))
+    socket.receive(JSON.stringify({ type: 'tts', state: 'sentence_start', text: '明白了，二千', session_id: 's1' }))
+    socket.receive(JSON.stringify({ type: 'tts', state: 'sentence_start', text: '我会再次尝试拍照', session_id: 's1' }))
+    // 工具调用（同一 TTS 会话中间，无第二个 tts.start）
+    socket.receive(JSON.stringify({ type: 'stt', text: '% self_camera_take_photo', session_id: 's1' }))
+    socket.receive(JSON.stringify({ type: 'llm', text: '🙂', emotion: 'happy', session_id: 's1' }))
+    // 工具调用之后的助手回复
+    socket.receive(JSON.stringify({ type: 'tts', state: 'sentence_start', text: '请稍等一下', session_id: 's1' }))
+    socket.receive(JSON.stringify({ type: 'tts', state: 'sentence_start', text: '好的，我已经再次拍照了', session_id: 's1' }))
+    socket.receive(JSON.stringify({ type: 'tts', state: 'sentence_start', text: '这次照片中的物品颜色比较清晰', session_id: 's1' }))
+    socket.receive(JSON.stringify({ type: 'tts', state: 'stop', session_id: 's1' }))
+
+    const messages = useStore.getState().messages
+    expect(messages).toHaveLength(4)
+    expect(messages[0].role).toBe('user')
+    expect(messages[0].text).toBe('不是你直接拍照看一下')
+    expect(messages[1].role).toBe('assistant')
+    expect(messages[1].text).toBe('哦 明白了，二千 我会再次尝试拍照')
+    expect(messages[2].role).toBe('user')
+    expect(messages[2].text).toBe('% self_camera_take_photo')
+    // 修复点：工具调用后的助手句子必须完整显示，而不是被丢弃
+    expect(messages[3].role).toBe('assistant')
+    expect(messages[3].text).toBe('请稍等一下 好的，我已经再次拍照了 这次照片中的物品颜色比较清晰')
+  })
+})
+
+// ---------- MCP initialize: vision capability parsing ----------
+
+describe('wsManager MCP vision capability', () => {
+  let fetchMock: ReturnType<typeof vi.fn>
+
+  beforeEach(() => {
+    fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    useStore.setState({
+      status: 'idle',
+      errorMessage: null,
+      sessionId: null,
+      wsUrl: null,
+      token: null,
+      deviceId: 'AA:BB:CC:DD:EE:FF',
+      config: { otaUrl: 'http://localhost:8003', clientId: 'test-client-id' },
+    })
+    useStore.getState().clearVisionEndpoint()
+    MockWebSocket.instances = []
+  })
+
+  afterEach(() => {
+    disconnect()
+    vi.clearAllMocks()
+    MockWebSocket.instances = []
+  })
+
+  it('initialize 携带 capabilities.vision 时应写入 store 的 visionUrl/visionToken', async () => {
+    fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ websocket: { url: 'ws://localhost:8080', token: 'token' } }) })
+
+    await connect()
+    await new Promise(r => setTimeout(r, 10))
+
+    const socket = (global.WebSocket as any).last as MockWebSocket
+    socket.receive(JSON.stringify({ type: 'hello', version: 1, transport: 'websocket', session_id: 's1', audio_params: { format: 'opus', sample_rate: 16000, channels: 1, frame_duration: 20 } }))
+
+    socket.receive(JSON.stringify({
+      type: 'mcp',
+      session_id: 's1',
+      payload: {
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'initialize',
+        params: {
+          capabilities: {
+            vision: { url: 'http://host:8003/mcp/vision/explain', token: 'eyJ-abc' },
+          },
+        },
+      },
+    }))
+
+    const state = useStore.getState()
+    expect(state.visionUrl).toBe('http://host:8003/mcp/vision/explain')
+    expect(state.visionToken).toBe('eyJ-abc')
+  })
+
+  it('initialize 不含 vision 时不应设置端点', async () => {
+    fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ websocket: { url: 'ws://localhost:8080', token: 'token' } }) })
+
+    await connect()
+    await new Promise(r => setTimeout(r, 10))
+
+    const socket = (global.WebSocket as any).last as MockWebSocket
+    socket.receive(JSON.stringify({ type: 'hello', version: 1, transport: 'websocket', session_id: 's1', audio_params: { format: 'opus', sample_rate: 16000, channels: 1, frame_duration: 20 } }))
+
+    socket.receive(JSON.stringify({
+      type: 'mcp',
+      session_id: 's1',
+      payload: { jsonrpc: '2.0', id: 1, method: 'initialize', params: { capabilities: {} } },
+    }))
+
+    expect(useStore.getState().visionUrl).toBe(null)
+  })
 })

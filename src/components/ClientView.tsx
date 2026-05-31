@@ -64,6 +64,7 @@ function MiniWaveform({ className = '' }: { className?: string }) {
 export function ClientView() {
   const emotionEmoji = useStore(s => s.emotionEmoji)
   const emotion = useStore(s => s.emotion)
+  const capturedPhotoUrl = useStore(s => s.capturedPhotoUrl)
   const sttText = useStore(s => s.sttText)
   const activationPayload = useStore(s => s.activationPayload)
   const activationMessage = activationPayload?.message ?? ''
@@ -290,6 +291,14 @@ export function ClientView() {
 
   const commandCenter = (
     <div className="w-[340px] shrink-0 border-l bg-gradient-to-b from-muted/30 to-background flex flex-col items-center justify-center gap-4 px-5 py-6">
+      {/* 拍照时在 emoji 上方短暂展示发送给服务端的照片（约 2 秒） */}
+      {capturedPhotoUrl && (
+        <img
+          src={capturedPhotoUrl}
+          alt="拍摄的照片"
+          className="w-28 h-28 rounded-lg border border-border object-cover shadow-md"
+        />
+      )}
       <div
         className="text-[72px] leading-none select-none"
         style={{

@@ -5,6 +5,7 @@ export const STORAGE_KEYS = {
   CLIENT_ID: 'xiaozhi_client_id',
   DEVICE_SETTINGS: 'xiaozhi_device_settings',
   PANEL_LAYOUT: 'xiaozhi_panel_layout',
+  CAMERA_ENABLED: 'xiaozhi_camera_enabled',
 } as const
 
 export function getStorageString(key: string): string | null {

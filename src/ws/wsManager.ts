@@ -22,17 +22,6 @@ function finalizeInterruptedAssistantTurn(): void {
   store().finalizeAssistantMessage()
 }
 
-function hasEmptyOpenAssistantTurn(): boolean {
-  const messages = store().messages
-  if (messages.length === 0) return false
-
-  const last = messages[messages.length - 1]
-  return last.role === 'assistant'
-    && last.audioFinalized === false
-    && last.text === ''
-    && last.audioChunks.length === 0
-}
-
 function isInternalToolSTT(text: string): boolean {
   return text.trimStart().startsWith('%')
 }
@@ -182,7 +171,10 @@ function handleText(raw: string): void {
   }
 
   if (isSTTMessage(msg)) {
-    const shouldRestoreAssistantTurn = hasEmptyOpenAssistantTurn() && isInternalToolSTT(msg.text)
+    // 内部工具 STT（% 前缀）出现在一个 TTS 会话中间：服务端不会再发第二个 tts.start，
+    // 工具调用后的句子仍会以 sentence_start 继续下发。无论工具调用前的助手轮是否已说过话，
+    // 都需要在追加 % 用户气泡后重开一个助手轮，否则后续句子会因最后一条是用户气泡而被丢弃。
+    const shouldRestoreAssistantTurn = isInternalToolSTT(msg.text)
     store().setSTT(msg.text)
     store().commitUserMessage(msg.text)
     if (shouldRestoreAssistantTurn) {
@@ -276,6 +268,16 @@ function handleMcp(msg: MCPMessage): void {
 
   // initialize request from server (server is MCP initiator)
   if (payload.method === 'initialize') {
+    // 解析服务端下发的视觉能力端点（参考 ESP32 ParseCapabilities）
+    const params = payload.params as
+      { capabilities?: { vision?: { url?: unknown; token?: unknown } } } | undefined
+    const vision = params?.capabilities?.vision
+    if (vision && typeof vision.url === 'string') {
+      const token = typeof vision.token === 'string' ? vision.token : null
+      store().setVisionEndpoint(vision.url, token)
+      store().addLog('system', `视觉端点已配置: ${vision.url}`)
+    }
+
     const resp = buildMCPResponse(sid, {
       jsonrpc: '2.0',
       id: payload.id,
@@ -352,6 +354,8 @@ function teardown(opts: TeardownOptions): void {
   clearTimers()
   finalizeInterruptedAssistantTurn()
   store().resetAudio()
+  // vision 端点是连接级的，断开时清除；摄像头开关是独立的持久设备设置，不在此重置
+  store().clearVisionEndpoint()
   if (opts.resetConnection) {
     if (opts.logMessage) store().addLog('system', opts.logMessage)
     store().reset()

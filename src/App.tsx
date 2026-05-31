@@ -5,11 +5,13 @@ import { ClientView } from './components/ClientView'
 import { MessageLog } from './components/MessageLog'
 import { ProtocolControls } from './components/ProtocolControls'
 import { DeviceSettingsPanel } from './components/DeviceSettingsPanel'
+import { CameraPanel } from './components/CameraPanel'
 import { HttpPanel } from './components/HttpPanel'
 import { SettingsPanel } from './components/SettingsPanel'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs'
 import { STORAGE_KEYS, getStorageJSON, setStorageJSON } from './lib/persistence'
 import { applyBrightness, applyTheme } from './features/device/deviceSetters'
+import { autoStartIfGranted } from './features/camera/cameraCapture'
 import { useStore } from './store'
 
 export default function App() {
@@ -21,6 +23,8 @@ export default function App() {
     const { brightness, theme } = useStore.getState()
     applyBrightness(brightness)
     applyTheme(theme)
+    // 若摄像头开关持久化为"开"，仅在浏览器已授权时自动恢复预览（不弹权限框）
+    void autoStartIfGranted()
   }, [])
 
   return (
@@ -55,6 +59,7 @@ export default function App() {
               <ProtocolControls />
             </TabsContent>
             <TabsContent value="iot" className="flex-1 overflow-auto mt-0 border-0">
+              <CameraPanel />
               <DeviceSettingsPanel />
             </TabsContent>
             <TabsContent value="http" className="flex-1 overflow-auto mt-0 border-0">

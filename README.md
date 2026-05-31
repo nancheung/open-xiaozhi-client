@@ -46,6 +46,8 @@ open-xiaozhi-client-webui
 | 🌐 HTTP 面板 | 在连接态下发送服务端管理指令（更新配置、重启等） |
 | ⚙️ 设置面板 | 调整 Hello 参数、音频参数、心跳、日志数量等配置，持久化保存 |
 | 🤖 MCP 协议支持 | 客户端作为 MCP Server 响应服务端工具调用（音量、亮度、主题、重启等） |
+| 📸 摄像头 / 视觉能力 | 支持 `self.camera.take_photo`：调用浏览器摄像头拍照，通过服务端下发的视觉端点分析图像并回传结果 |
+| 🔐 设备激活流程 | 对齐 xiaozhi-esp32 OTA 激活协议，自动轮询 `/activate` 完成设备注册 |
 
 ## 👥 适合谁
 
@@ -118,7 +120,7 @@ npm run build
 ```text
 src/
   🧩 components/   WebUI 组件与调试面板
-  ⚙️ features/     连接、协议、音频、IoT、MCP、设备等业务状态
+  ⚙️ features/     连接、协议、音频、IoT、MCP、设备、摄像头等业务状态
   🪝 hooks/        音频与连接相关 Hook
   🗄️ store/        全局状态管理（Zustand slice 模式）
   📡 ws/           WebSocket 管理与协议收发
@@ -141,6 +143,8 @@ src/
 - [x] ~~面向协议学习与服务端调试的基础交互能力~~ ✅
 - [x] ~~响应式双栏布局 + 三种监听模式~~ ✅
 - [x] ~~MCP 协议支持 + 设备控制面板~~ ✅
+- [x] ~~摄像头 / 视觉能力（`self.camera.take_photo`）~~ ✅
+- [x] ~~设备激活流程（OTA 激活协议对齐）~~ ✅
 - [ ] 📱 更多客户端形态支持
 - [ ] 🖥️ 更完整的多端体验
 - [ ] 🔄 持续完善小智生态下的客户端能力

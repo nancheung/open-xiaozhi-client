@@ -22,8 +22,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Mic, Square, X, Radio, Sparkles, Phone } from 'lucide-react'
 import { useStore } from '../store'
-import { useConnection } from '../hooks/useConnection'
-import { useAudio } from '../hooks/useAudio'
+import { useDispatch } from '../ui/runtime/RuntimeContext'
+import { useAudioAnalysers } from '../ui/hooks/useAudioAnalysers'
 import { Button } from './ui/button'
 import { VolumeBar } from './VolumeBar'
 import { WaveformBars } from './WaveformBars'
@@ -75,11 +75,9 @@ export function ClientView() {
   const status = useStore(s => s.status)
   const audioError = useStore(s => s.audioError)
   const audioContextSuspended = useStore(s => s.audioContextSuspended)
-  const setListenMode = useStore(s => s.setListenMode)
-  const setAudioStatus = useStore(s => s.setAudioStatus)
   const setAudioError = useStore(s => s.setAudioError)
-  const { sendListen, sendAbort } = useConnection()
-  const { recordingAnalyser, playbackAnalyser, resumeAudioContext } = useAudio()
+  const dispatch = useDispatch()
+  const { recordingAnalyser, playbackAnalyser, resumeAudioContext } = useAudioAnalysers()
 
   const isReady = status === 'ready'
   const isRecording = audioStatus === 'recording'
@@ -107,23 +105,13 @@ export function ClientView() {
 
   function handleMicClick() {
     if (!isReady && !isRecording) return
-    if (isRecording) {
-      if (listenMode === 'realtime') {
-        sendAbort()
-      } else {
-        sendListen('stop')
-      }
-      setAudioStatus('idle')
-    } else {
-      if (isTTSActive) sendAbort()
-      sendListen('start', { mode: listenMode })
-      setAudioStatus('recording')
-    }
+    // 麦克风开/关、abort/stop 的判定、TTS 期间打断等全部由会话状态机决策
+    dispatch({ type: 'ToggleMic' })
   }
 
   function handleCycleMode() {
     if (isRecording) return
-    setListenMode(cycleMode(listenMode))
+    dispatch({ type: 'SetListenMode', mode: cycleMode(listenMode) })
   }
 
   // ─── Sub-pieces (shared by both layouts) ───
@@ -202,7 +190,7 @@ export function ClientView() {
             variant="ghost"
             size="icon"
             className="h-9 w-9 shrink-0"
-            onClick={() => { sendAbort(); setAudioStatus('idle') }}
+            onClick={() => dispatch({ type: 'Abort' })}
             title="中断"
           >
             <X className="h-4 w-4" />
@@ -363,7 +351,7 @@ export function ClientView() {
           variant="ghost"
           size="sm"
           className="h-6 text-[11px] text-muted-foreground"
-          onClick={() => { sendAbort(); setAudioStatus('idle') }}
+          onClick={() => dispatch({ type: 'Abort' })}
         >
           <X className="h-3 w-3 mr-1" />
           中断

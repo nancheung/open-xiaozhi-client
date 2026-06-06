@@ -1,5 +1,6 @@
 import { useStore } from '@/store'
-import { applyVolume, applyBrightness, applyTheme, MIN_BRIGHTNESS } from '@/features/device/deviceSetters'
+import { MIN_BRIGHTNESS } from '@/features/device/deviceSetters'
+import { useDispatch } from '@/ui/runtime/RuntimeContext'
 import { Slider } from './ui/slider'
 import { Switch } from './ui/switch'
 import { Label } from './ui/label'
@@ -8,6 +9,7 @@ export function DeviceSettingsPanel() {
   const volume = useStore((s) => s.volume)
   const brightness = useStore((s) => s.brightness)
   const theme = useStore((s) => s.theme)
+  const dispatch = useDispatch()
 
   return (
     <div className="p-4 space-y-6 max-w-xs">
@@ -21,7 +23,7 @@ export function DeviceSettingsPanel() {
           max={100}
           step={1}
           value={[volume]}
-          onValueChange={([v]) => applyVolume(v)}
+          onValueChange={([v]) => dispatch({ type: 'SetVolume', value: v })}
         />
       </div>
 
@@ -35,7 +37,7 @@ export function DeviceSettingsPanel() {
           max={100}
           step={1}
           value={[brightness]}
-          onValueChange={([v]) => applyBrightness(v)}
+          onValueChange={([v]) => dispatch({ type: 'SetBrightness', value: v })}
         />
         <p className="text-xs text-muted-foreground">
           最低亮度限制为 {MIN_BRIGHTNESS}%，以防止页面不可见
@@ -48,7 +50,7 @@ export function DeviceSettingsPanel() {
           <span className="text-xs text-muted-foreground">浅色</span>
           <Switch
             checked={theme === 'dark'}
-            onCheckedChange={(checked) => applyTheme(checked ? 'dark' : 'light')}
+            onCheckedChange={(checked) => dispatch({ type: 'SetTheme', value: checked ? 'dark' : 'light' })}
           />
           <span className="text-xs text-muted-foreground">深色</span>
         </div>

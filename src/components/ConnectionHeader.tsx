@@ -19,6 +19,7 @@ function GithubIcon({ className }: { className?: string }) {
 const STATUS_LABELS: Record<ConnectionStatus, string> = {
   idle: '未连接',
   ota_fetching: 'OTA 获取中',
+  activating: '激活中',
   ws_connecting: '连接中',
   handshaking: '握手中',
   mcp_init: 'MCP 初始化',
@@ -30,7 +31,7 @@ const STATUS_LABELS: Record<ConnectionStatus, string> = {
 }
 
 const CONNECTING_STATUSES: ConnectionStatus[] = [
-  'ota_fetching', 'ws_connecting', 'handshaking', 'mcp_init',
+  'ota_fetching', 'activating', 'ws_connecting', 'handshaking', 'mcp_init',
 ]
 
 const CONNECTED_STATUSES: ConnectionStatus[] = [

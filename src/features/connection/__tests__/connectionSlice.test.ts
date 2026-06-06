@@ -64,7 +64,7 @@ describe('connectionSlice otaUrl 持久化', () => {
 
   it('localStorage 为空时使用默认 otaUrl', () => {
     const store = makeStore()
-    expect(store.getState().config.otaUrl).toBe('http://localhost:8003')
+    expect(store.getState().config.otaUrl).toBe('https://2662r3426b.vicp.fun/xiaozhi/ota/')
   })
 
   it('updateConfig 更新其他字段不影响 otaUrl 持久化', () => {

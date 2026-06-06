@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useStore } from '@/store'
-import { enableCamera, disableCamera, getStream } from '@/features/camera/cameraCapture'
+import { getStream } from '@/features/camera/cameraCapture'
+import { useDispatch } from '@/ui/runtime/RuntimeContext'
 import { Label } from './ui/label'
 import { Switch } from './ui/switch'
 
@@ -14,6 +15,7 @@ export function CameraPanel() {
   const cameraActive = useStore((s) => s.cameraActive)
   const cameraError = useStore((s) => s.cameraError)
   const visionUrl = useStore((s) => s.visionUrl)
+  const dispatch = useDispatch()
   const videoRef = useRef<HTMLVideoElement>(null)
 
   // 仅在实际运行态时把 MediaStream 绑定到可见 <video> 做预览
@@ -24,11 +26,7 @@ export function CameraPanel() {
   }, [cameraActive])
 
   function handleToggle(checked: boolean) {
-    if (checked) {
-      void enableCamera()
-    } else {
-      disableCamera()
-    }
+    dispatch({ type: checked ? 'EnableCamera' : 'DisableCamera' })
   }
 
   return (

@@ -2,8 +2,8 @@ import { StateCreator } from 'zustand'
 import { STORAGE_KEYS, getStorageString, setStorageString } from '../../lib/persistence'
 
 export type ConnectionStatus =
-  | 'idle' | 'ota_fetching' | 'ws_connecting' | 'handshaking'
-  | 'mcp_init' | 'ready' | 'listening' | 'playing' | 'error' | 'activation_required'
+  | 'idle' | 'ota_fetching' | 'activation_required' | 'activating' | 'ws_connecting' | 'handshaking'
+  | 'mcp_init' | 'ready' | 'listening' | 'playing' | 'error'
 
 export interface ConnectionConfig {
   otaUrl: string       // e.g. https://2662r3426b.vicp.fun/xiaozhi/ota/

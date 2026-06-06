@@ -16,8 +16,8 @@ import { buildPing } from '../core/domain/protocol/messages'
 
 export interface HelloParams {
   version: number
-  features: Record<string, unknown>
-  audio: Record<string, unknown>
+  features: unknown
+  audio: unknown
 }
 
 export interface SessionOrchestratorDeps {

@@ -2,20 +2,20 @@ import { useState } from 'react'
 import { useStore } from '../store'
 import { Button } from './ui/button'
 import { Textarea } from './ui/textarea'
-import { sendJson } from '../ws/wsManager'
+import { useDispatch } from '../ui/runtime/RuntimeContext'
 
 export function ProtocolControls() {
   const [rawJson, setRawJson] = useState('')
   const [error, setError] = useState<string | null>(null)
   const status = useStore(s => s.status)
+  const dispatch = useDispatch()
 
   const isConnected = !['idle', 'error'].includes(status)
 
   function handleSend() {
     try {
       const msg = JSON.parse(rawJson)
-      sendJson(msg)
-      useStore.getState().addLog('out', msg)
+      dispatch({ type: 'SendRawJson', payload: msg })
       setError(null)
       setRawJson('')
     } catch (e) {

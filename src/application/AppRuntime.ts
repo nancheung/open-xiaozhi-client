@@ -33,15 +33,18 @@ export interface AppRuntimeDeps {
   getHelloParams: () => HelloParams
   initialMode: ListenMode
   device: DeviceCommandHandlers
+  /** 可注入共享事件总线（使音频适配器等可向同一总线 emit）。 */
+  bus?: EventBus<DomainEvent>
 }
 
 export class AppRuntime {
-  readonly bus = new EventBus<DomainEvent>()
+  readonly bus: EventBus<DomainEvent>
   private readonly orchestrator: SessionOrchestrator
   private readonly conversation: ConversationService
   private readonly mcp: McpService
 
   constructor(private readonly deps: AppRuntimeDeps) {
+    this.bus = deps.bus ?? new EventBus<DomainEvent>()
     this.orchestrator = new SessionOrchestrator({
       transport: deps.transport,
       provisioning: deps.provisioning,

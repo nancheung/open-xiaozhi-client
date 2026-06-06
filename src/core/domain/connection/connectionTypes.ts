@@ -25,8 +25,17 @@ export interface ConnContext {
   activationTimeoutMs?: number
 }
 
+export interface ConnectConfig {
+  otaUrl: string
+  deviceId: string
+  clientId: string
+  mcpRequired: boolean
+  handshakeTimeoutMs: number
+  heartbeatIntervalMs: number
+}
+
 export type ConnEvent =
-  | { type: 'CONNECT' }
+  | { type: 'CONNECT'; config: ConnectConfig }
   | { type: 'OTA_OK'; result: OtaResult }
   | { type: 'OTA_FAIL'; message: string }
   | { type: 'ACTIVATION_OK'; result: OtaResult }

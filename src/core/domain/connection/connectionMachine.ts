@@ -105,7 +105,9 @@ export function createConnectionMachine(initial: {
         on: {
           CONNECT: {
             target: 'otaFetching',
-            assign: () => ({ wsInfo: null, sessionId: null, errorMessage: null }),
+            assign: (_, ev) => ev.type === 'CONNECT'
+              ? { ...ev.config, wsInfo: null, sessionId: null, errorMessage: null }
+              : {},
           },
         },
       },

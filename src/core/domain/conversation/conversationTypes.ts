@@ -19,6 +19,7 @@ export type TurnEvent =
   | { type: 'TTS_START' }
   | { type: 'TTS_STOP' }
   | { type: 'STT'; text: string; internalTool: boolean }
+  | { type: 'MIC_FAILED' }
   | { type: 'SESSION_LOST' }
 
 export type TurnEffect =

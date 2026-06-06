@@ -92,6 +92,8 @@ export function createConversationMachine(initialMode: TurnContext['mode']): Mac
           ],
           TTS_STOP: { effects: () => [emit({ type: 'TtsStopped' })] },
           SET_MODE: { assign: setMode, effects: setModeEffects },
+          // 麦克风初始化失败：回 idle 但不发 listen stop（对齐原 setAudioStatus('idle')）
+          MIC_FAILED: { target: 'idle', assign: () => ({ ttsActive: false, autoRestart: false }), effects: () => [{ kind: 'stopMic' }] },
           SESSION_LOST: { target: 'idle', assign: () => ({ ttsActive: false, autoRestart: false }), effects: () => [{ kind: 'stopMic' }] },
         },
       },
@@ -154,6 +156,7 @@ export function createConversationMachine(initialMode: TurnContext['mode']): Mac
           },
           TTS_START: { assign: () => ({ ttsActive: true }) },
           SET_MODE: { assign: setMode, effects: setModeEffects },
+          MIC_FAILED: { target: 'idle', assign: () => ({ ttsActive: false, autoRestart: false }), effects: () => [{ kind: 'stopMic' }] },
           SESSION_LOST: { target: 'idle', assign: () => ({ ttsActive: false, autoRestart: false }), effects: () => [{ kind: 'stopMic' }] },
         },
       },

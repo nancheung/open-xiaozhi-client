@@ -22,7 +22,10 @@ export function useConnection() {
     if (!sessionId) return
     const msg = buildListen(state, sessionId, opts)
     sendJson(msg)
-    useStore.getState().addLog('out', msg)
+    const store = useStore.getState()
+    store.addLog('out', msg)
+    if (state === 'start') store.markUserStart()
+    else if (state === 'stop') store.markUserStop()
   }, [sessionId])
 
   const sendAbort = useCallback((reason?: 'wake_word_detected') => {

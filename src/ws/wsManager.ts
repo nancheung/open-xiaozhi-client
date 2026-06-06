@@ -203,6 +203,10 @@ function handleText(raw: string): void {
     const shouldRestoreAssistantTurn = isInternalToolSTT(msg.text)
     store().setSTT(msg.text)
     store().commitUserMessage(msg.text)
+    // 仅真实用户 STT 记入耗时分析；% 前缀的内部工具 STT 出现在 TTS 会话中间，跳过
+    if (!shouldRestoreAssistantTurn) {
+      store().markStt()
+    }
     if (shouldRestoreAssistantTurn) {
       store().beginAssistantTurn()
     }
@@ -218,6 +222,7 @@ function handleText(raw: string): void {
     if (msg.state === 'start') {
       const listenMode = store().listenMode
       store().setIsTTSActive(true)
+      store().markServerEnter()
       store().beginAssistantTurn()
       if (listenMode === 'realtime') {
         // 全双工：保持 audioStatus='recording'，麦克风持续采集发送
@@ -228,6 +233,7 @@ function handleText(raw: string): void {
         store().setAudioStatus('playing')
       }
     } else if (msg.state === 'sentence_start' && msg.text) {
+      store().markServerSpeak()
       store().setTTSText(msg.text)
       store().appendAssistantText(msg.text)
     } else if (msg.state === 'stop') {
@@ -247,6 +253,7 @@ function handleText(raw: string): void {
             sendJson(restartMsg)
             store().addLog('out', restartMsg)
             store().setAudioStatus('recording')
+            store().markUserStart()
           } else {
             store().setAudioStatus('idle')
           }
@@ -352,6 +359,7 @@ function handleMcp(msg: MCPMessage): void {
 }
 
 function handleBinary(data: Uint8Array): void {
+  store().markServerSpeak()
   store().addBinaryLog('binary-in', data)
   store().appendAssistantAudio(data)
   window.dispatchEvent(new CustomEvent('ws:audio', { detail: data }))

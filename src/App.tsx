@@ -3,6 +3,7 @@ import { Panel, Group, Separator } from 'react-resizable-panels'
 import { ConnectionHeader } from './components/ConnectionHeader'
 import { ClientView } from './components/ClientView'
 import { MessageLog } from './components/MessageLog'
+import { LatencyPanel } from './components/LatencyPanel'
 import { ProtocolControls } from './components/ProtocolControls'
 import { DeviceSettingsPanel } from './components/DeviceSettingsPanel'
 import { CameraPanel } from './components/CameraPanel'
@@ -17,6 +18,9 @@ import { useStore } from './store'
 export default function App() {
   const [savedLayout] = useState(
     () => getStorageJSON<Record<string, number>>(STORAGE_KEYS.PANEL_LAYOUT) ?? undefined
+  )
+  const [savedLogLayout] = useState(
+    () => getStorageJSON<Record<string, number>>(STORAGE_KEYS.LOG_PANEL_LAYOUT) ?? undefined
   )
 
   useEffect(() => {
@@ -55,7 +59,20 @@ export default function App() {
               </TabsList>
             </div>
             <TabsContent value="log" className="flex-1 flex flex-col overflow-hidden mt-0 border-0">
-              <MessageLog />
+              <Group
+                orientation="vertical"
+                className="flex-1 overflow-hidden"
+                defaultLayout={savedLogLayout}
+                onLayoutChanged={(layout) => setStorageJSON(STORAGE_KEYS.LOG_PANEL_LAYOUT, layout)}
+              >
+                <Panel id="log-messages" defaultSize="55%" minSize="20%" className="flex flex-col overflow-hidden">
+                  <MessageLog />
+                </Panel>
+                <Separator className="h-1.5 bg-border hover:bg-primary/60 transition-colors cursor-row-resize" />
+                <Panel id="log-latency" defaultSize="45%" minSize="15%" className="flex flex-col overflow-hidden">
+                  <LatencyPanel />
+                </Panel>
+              </Group>
               <ProtocolControls />
             </TabsContent>
             <TabsContent value="iot" className="flex-1 overflow-auto mt-0 border-0">

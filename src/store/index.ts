@@ -10,11 +10,12 @@ import { createDeviceSettingsSlice, type DeviceSettingsState } from '../features
 import { createActivationSlice, type ActivationState } from '../features/activation/activationSlice'
 import { createConversationSlice, type ConversationState } from '../features/conversation/conversationSlice'
 import { createCameraSlice, type CameraState } from '../features/camera/cameraSlice'
+import { createLatencySlice, type LatencyState } from '../features/latency/latencySlice'
 
 export type AppState =
   ConnectionState & SettingsState & ProtocolState & McpState & AudioState &
   IotState & DeviceIdentityState & DeviceSettingsState & ActivationState & ConversationState &
-  CameraState
+  CameraState & LatencyState
 
 export const useStore = create<AppState>()((...args) => ({
   ...createConnectionSlice(...args),
@@ -28,4 +29,5 @@ export const useStore = create<AppState>()((...args) => ({
   ...createActivationSlice(...args),
   ...createConversationSlice(...args),
   ...createCameraSlice(...args),
+  ...createLatencySlice(...args),
 }))

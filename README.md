@@ -117,14 +117,21 @@ npm run build
 
 ## 📁 项目结构
 
+采用**六边形 / 端口-适配器 + 事件驱动**架构，状态机与副作用分离，UI 与服务器交互完全解耦：
+
 ```text
 src/
+  🧠 core/         纯领域核心（零依赖 React/浏览器）：FSM 内核、连接/会话状态机、协议消息、端口接口、事件与命令
+  🔌 adapters/     端口的浏览器实现：WebSocket 传输、HTTP OTA/激活、麦克风/扬声器、时钟
+  🎛️ application/  应用编排：组合根、连接/会话编排、MCP 服务、入站消息路由
+  🌉 ui/           运行时桥：组合根装配、命令分发、领域事件投影到 Zustand
   🧩 components/   WebUI 组件与调试面板
-  ⚙️ features/     连接、协议、音频、IoT、MCP、设备、摄像头等业务状态
+  ⚙️ features/     业务功能与 Zustand slice（连接、协议、音频、IoT、MCP、设备、摄像头、耗时统计等）
   🪝 hooks/        音频与连接相关 Hook
-  🗄️ store/        全局状态管理（Zustand slice 模式）
-  📡 ws/           WebSocket 管理与协议收发
+  🗄️ store/        全局状态聚合（Zustand slice 模式）
 ```
+
+**数据流**：UI 通过 `dispatch(Command)` 表达意图 → 状态机产出 effects → 编排层经端口产生副作用并广播领域事件 → 投影层将事件单向写入只读视图模型 → React 重渲染。
 
 ## 🎯 这个项目的定位
 

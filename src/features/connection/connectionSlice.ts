@@ -39,7 +39,11 @@ function getOrCreateClientId(): string {
 
 function loadOtaUrl(): string {
   const stored = getStorageString(STORAGE_KEYS.OTA_URL)
-  return stored || 'https://2662r3426b.vicp.fun/xiaozhi/ota/'
+  if (stored) return stored
+  if (typeof window !== 'undefined' && window.__OTA_URL__) {
+    return window.__OTA_URL__
+  }
+  return 'https://2662r3426b.vicp.fun/xiaozhi/ota/'
 }
 
 export const createConnectionSlice: StateCreator<ConnectionState> = (set) => ({

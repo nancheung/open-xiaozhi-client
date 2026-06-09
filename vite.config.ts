@@ -30,6 +30,7 @@ function serveOpusWasm(): Plugin {
 export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
+    __APP_NPM_NAME__: JSON.stringify(pkg.name),
   },
   plugins: [react(), tailwindcss(), wasm(), topLevelAwait(), serveOpusWasm()],
   resolve: {

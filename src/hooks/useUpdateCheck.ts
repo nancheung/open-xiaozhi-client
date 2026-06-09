@@ -1,7 +1,5 @@
 import { useEffect, useState } from 'react'
 
-const RELEASES_API = 'https://api.github.com/repos/nancheung/open-xiaozhi-client/releases/latest'
-
 function isNewer(latest: string, current: string): boolean {
   const parse = (v: string) => v.replace(/^v/, '').split('.').map(Number)
   const [lMaj, lMin, lPat] = parse(latest)
@@ -18,10 +16,10 @@ export function useUpdateCheck() {
   useEffect(() => {
     ;(async () => {
       try {
-        const res = await fetch(RELEASES_API)
+        const res = await fetch(`https://registry.npmjs.org/${__APP_NPM_NAME__}`)
         if (!res.ok) return
         const data = await res.json()
-        const tag: string = data?.tag_name ?? ''
+        const tag: string = data?.['dist-tags']?.latest ?? ''
         if (!tag) return
         setLatestVersion(tag)
         if (isNewer(tag, __APP_VERSION__)) {

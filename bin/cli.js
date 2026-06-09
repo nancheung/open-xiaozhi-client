@@ -12,6 +12,38 @@ const distPath = join(__dirname, '..', 'dist')
 
 const DEFAULT_PORT = 14100
 
+function parseOtaUrl(argv) {
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i]
+    if (arg === '--ota') {
+      return argv[i + 1] || null
+    }
+    if (arg.startsWith('--ota=')) {
+      return arg.slice('--ota='.length) || null
+    }
+  }
+  return null
+}
+
+const OTA_URL = parseOtaUrl(process.argv.slice(2))
+
+function parsePort(argv) {
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i]
+    if (arg === '--port') {
+      const v = parseInt(argv[i + 1], 10)
+      return isNaN(v) ? null : v
+    }
+    if (arg.startsWith('--port=')) {
+      const v = parseInt(arg.slice('--port='.length), 10)
+      return isNaN(v) ? null : v
+    }
+  }
+  return null
+}
+
+const SPECIFIED_PORT = parsePort(process.argv.slice(2))
+
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'application/javascript',
@@ -85,6 +117,21 @@ function serveFile(res, filePath) {
   }
 }
 
+function serveIndexHtml(res) {
+  try {
+    let html = readFileSync(join(distPath, 'index.html'), 'utf-8')
+    if (OTA_URL) {
+      const inject = `<script>window.__OTA_URL__ = ${JSON.stringify(OTA_URL)};</script>`
+      html = html.replace('</head>', `${inject}</head>`)
+    }
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
+    res.end(html)
+  } catch {
+    res.writeHead(500, { 'Content-Type': 'text/plain' })
+    res.end('Internal Server Error')
+  }
+}
+
 function isSafePath(filePath) {
   const rel = relative(distPath, filePath)
   return !rel.startsWith('..') && !isAbsolute(rel)
@@ -99,7 +146,16 @@ async function start() {
 
   let port
   try {
-    port = await findAvailablePort(DEFAULT_PORT)
+    if (SPECIFIED_PORT !== null) {
+      const available = await isPortAvailable(SPECIFIED_PORT)
+      if (!available) {
+        console.error(`错误: 端口 ${SPECIFIED_PORT} 已被占用，请更换端口或省略 --port 参数自动选择。`)
+        process.exit(1)
+      }
+      port = SPECIFIED_PORT
+    } else {
+      port = await findAvailablePort(DEFAULT_PORT)
+    }
   } catch (err) {
     console.error(`错误: 无法确定可用端口: ${err.message}`)
     process.exit(1)
@@ -126,7 +182,12 @@ async function start() {
     }
 
     if (!existsSync(filePath) || statSync(filePath).isDirectory()) {
-      serveFile(res, join(distPath, 'index.html'))
+      serveIndexHtml(res)
+      return
+    }
+
+    if (filePath === join(distPath, 'index.html')) {
+      serveIndexHtml(res)
       return
     }
 
@@ -138,13 +199,19 @@ async function start() {
     process.exit(1)
   })
 
-  server.listen(port, '127.0.0.1', () => {
+  server.listen(port, '0.0.0.0', () => {
     console.log('')
     console.log('  Open Xiaozhi Client')
     console.log('  ─────────────────────────────────')
     console.log(`  本地访问地址: ${url}`)
-    if (port !== DEFAULT_PORT) {
+    console.log(`  正在监听所有网络接口 (0.0.0.0:${port})`)
+    if (SPECIFIED_PORT !== null) {
+      console.log(`  (端口由 --port 参数指定)`)
+    } else if (port !== DEFAULT_PORT) {
       console.log(`  (端口 ${DEFAULT_PORT} 已被占用，自动切换至 ${port})`)
+    }
+    if (OTA_URL) {
+      console.log(`  默认服务地址: ${OTA_URL}`)
     }
     console.log('')
     console.log('  使用方式: 在浏览器中打开上方地址')

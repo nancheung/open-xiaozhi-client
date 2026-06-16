@@ -7,6 +7,7 @@ export const STORAGE_KEYS = {
   PANEL_LAYOUT: 'xiaozhi_panel_layout',
   LOG_PANEL_LAYOUT: 'xiaozhi_log_panel_layout',
   CAMERA_ENABLED: 'xiaozhi_camera_enabled',
+  AUTO_FILL_SESSION_ID: 'xiaozhi_auto_fill_session_id',
 } as const
 
 export function getStorageString(key: string): string | null {
